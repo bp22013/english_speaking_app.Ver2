@@ -293,7 +293,9 @@ export default function AdminMessageCreate() {
                                 >
                                     <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
                                         <DialogTrigger asChild>
-                                            <Button variant="outline">プレビュー</Button>
+                                            <Button variant="outline" className="cursor-pointer">
+                                                プレビュー
+                                            </Button>
                                         </DialogTrigger>
                                         <DialogContent className="max-w-2xl">
                                             <DialogHeader>

@@ -285,6 +285,7 @@ export default function AdminStudentCreate() {
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => window.history.back()}
+                                        className="cursor-pointer"
                                     >
                                         <ArrowLeft className="h-4 w-4" />
                                     </Button>
@@ -315,7 +316,7 @@ export default function AdminStudentCreate() {
                                 >
                                     <Dialog open={previewMode} onOpenChange={setPreviewMode}>
                                         <DialogTrigger asChild>
-                                            <Button variant="outline">
+                                            <Button variant="outline" className="cursor-pointer">
                                                 <Eye className="mr-2 h-4 w-4" />
                                                 プレビュー
                                             </Button>

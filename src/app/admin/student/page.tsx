@@ -52,7 +52,9 @@ import {
     SoftFadeIn,
     StaggerContainer,
 } from '../../components/page-transition';
+import { StudentDataDownload } from '@/app/components/studentDataDownloadButton';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 // 生徒データの型定義
 interface Student {
@@ -169,6 +171,8 @@ export default function AdminStudents() {
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+    const router = useRouter();
 
     // 学年とクラスの一覧を取得
     const grades = Array.from(new Set(students.map((student) => student.grade)));
@@ -290,15 +294,15 @@ export default function AdminStudents() {
                                     transition={{ delay: 0.4, duration: 0.6 }}
                                     className="mt-4 md:mt-0 flex space-x-3"
                                 >
-                                    <Button variant="outline">
-                                        <Download className="mr-2 h-4 w-4" />
-                                        エクスポート
-                                    </Button>
-                                    <Button variant="outline">
+                                    <StudentDataDownload />
+                                    <Button variant="outline" className="cursor-pointer">
                                         <Upload className="mr-2 h-4 w-4" />
                                         インポート
                                     </Button>
-                                    <Button className="bg-purple-600 hover:bg-purple-700">
+                                    <Button
+                                        className="bg-purple-600 hover:bg-purple-700 cursor-pointer"
+                                        onClick={() => router.push('/admin/student/create')}
+                                    >
                                         <UserPlus className="mr-2 h-4 w-4" />
                                         生徒を追加
                                     </Button>
@@ -401,22 +405,29 @@ export default function AdminStudents() {
                                                 value={selectedGrade}
                                                 onValueChange={setSelectedGrade}
                                             >
-                                                <SelectTrigger className="w-[150px]">
+                                                <SelectTrigger className="w-[150px] cursor-pointer">
                                                     <div className="flex items-center">
                                                         <Filter className="w-4 h-4 mr-2" />
                                                         <span>
                                                             {selectedGrade === 'all'
-                                                                ? 'すべての学年'
+                                                                ? '全ての学年'
                                                                 : selectedGrade}
                                                         </span>
                                                     </div>
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="all">
-                                                        すべての学年
+                                                    <SelectItem
+                                                        value="all"
+                                                        className="cursor-pointer"
+                                                    >
+                                                        全ての学年
                                                     </SelectItem>
                                                     {grades.map((grade) => (
-                                                        <SelectItem key={grade} value={grade}>
+                                                        <SelectItem
+                                                            key={grade}
+                                                            value={grade}
+                                                            className="cursor-pointer"
+                                                        >
                                                             {grade}
                                                         </SelectItem>
                                                     ))}
@@ -427,22 +438,29 @@ export default function AdminStudents() {
                                                 value={selectedClass}
                                                 onValueChange={setSelectedClass}
                                             >
-                                                <SelectTrigger className="w-[120px]">
+                                                <SelectTrigger className="w-[150px] cursor-pointer">
                                                     <div className="flex items-center">
                                                         <Filter className="w-4 h-4 mr-2" />
                                                         <span>
                                                             {selectedClass === 'all'
-                                                                ? 'すべてのクラス'
+                                                                ? '全てのクラス'
                                                                 : selectedClass}
                                                         </span>
                                                     </div>
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="all">
-                                                        すべてのクラス
+                                                    <SelectItem
+                                                        value="all"
+                                                        className="cursor-pointer"
+                                                    >
+                                                        全てのクラス
                                                     </SelectItem>
                                                     {classes.map((cls) => (
-                                                        <SelectItem key={cls} value={cls}>
+                                                        <SelectItem
+                                                            key={cls}
+                                                            value={cls}
+                                                            className="cursor-pointer"
+                                                        >
                                                             {cls}
                                                         </SelectItem>
                                                     ))}
@@ -453,28 +471,40 @@ export default function AdminStudents() {
                                                 value={selectedStatus}
                                                 onValueChange={setSelectedStatus}
                                             >
-                                                <SelectTrigger className="w-[140px]">
+                                                <SelectTrigger className="w-[178px] cursor-pointer">
                                                     <div className="flex items-center">
                                                         <Filter className="w-4 h-4 mr-2" />
                                                         <span>
                                                             {selectedStatus === 'all'
-                                                                ? 'すべてのステータス'
+                                                                ? '全てのステータス'
                                                                 : getStatusConfig(selectedStatus)
                                                                       .label}
                                                         </span>
                                                     </div>
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="all">
-                                                        すべてのステータス
+                                                    <SelectItem
+                                                        value="all"
+                                                        className="cursor-pointer"
+                                                    >
+                                                        全てのステータス
                                                     </SelectItem>
-                                                    <SelectItem value="active">
+                                                    <SelectItem
+                                                        value="active"
+                                                        className="cursor-pointer"
+                                                    >
                                                         アクティブ
                                                     </SelectItem>
-                                                    <SelectItem value="inactive">
+                                                    <SelectItem
+                                                        value="inactive"
+                                                        className="cursor-pointer"
+                                                    >
                                                         非アクティブ
                                                     </SelectItem>
-                                                    <SelectItem value="suspended">
+                                                    <SelectItem
+                                                        value="suspended"
+                                                        className="cursor-pointer"
+                                                    >
                                                         停止中
                                                     </SelectItem>
                                                 </SelectContent>

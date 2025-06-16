@@ -94,7 +94,7 @@ export default function AdminDashboard() {
                                         </Link>
                                     </Button>
                                     <Button asChild variant="outline">
-                                        <Link href="/admin/students">
+                                        <Link href="/admin/student">
                                             <Users className="mr-2 h-4 w-4" />
                                             生徒一覧
                                         </Link>

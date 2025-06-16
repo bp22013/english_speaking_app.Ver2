@@ -2,21 +2,31 @@
 
 import type React from 'react';
 
-import { use, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpen, GraduationCap, Shield, User, Mail, Lock, ArrowRight } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import {
+    BookOpen,
+    GraduationCap,
+    Shield,
+    User,
+    Mail,
+    Lock,
+    ArrowRight,
+    Eye,
+    EyeOff,
+} from 'lucide-react';
 import Link from 'next/link';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [activeTab, setActiveTab] = useState('student');
-    const router = useRouter();
+    const [showStudentPassword, setStudentShowPassword] = useState(false);
+    const [showAdminPassword, setShowAdminPassword] = useState(false);
 
     const AdminhandleLogin = (e: React.FormEvent) => {
         e.preventDefault();
@@ -56,14 +66,14 @@ export default function LoginPage() {
                             <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100/50 p-1 rounded-xl h-14">
                                 <TabsTrigger
                                     value="student"
-                                    className="flex items-center justify-center space-x-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg py-2 px-4 transition-all duration-200 text-sm font-medium"
+                                    className="flex items-center justify-center space-x-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg py-2 px-4 transition-all duration-200 text-sm font-medium cursor-pointer"
                                 >
                                     <GraduationCap className="w-4 h-4 flex-shrink-0" />
                                     <span>生徒</span>
                                 </TabsTrigger>
                                 <TabsTrigger
                                     value="admin"
-                                    className="flex items-center justify-center space-x-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg py-2 px-4 transition-all duration-200 text-sm font-medium"
+                                    className="flex items-center justify-center space-x-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg py-2 px-4 transition-all duration-200 text-sm font-medium cursor-pointer"
                                 >
                                     <Shield className="w-4 h-4 flex-shrink-0" />
                                     <span>管理者</span>
@@ -89,6 +99,7 @@ export default function LoginPage() {
                                         <div className="relative">
                                             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <Input
+                                                autoFocus
                                                 id="student-email"
                                                 type="text"
                                                 placeholder="生徒IDを入力"
@@ -119,19 +130,34 @@ export default function LoginPage() {
                                             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <Input
                                                 id="student-password"
-                                                type="password"
+                                                type={showStudentPassword ? 'text' : 'password'}
                                                 placeholder="パスワードを入力"
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
                                                 required
-                                                className="pl-10 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                                                className="pl-10 pr-10 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
                                             />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
+                                                onClick={() =>
+                                                    setStudentShowPassword(!showStudentPassword)
+                                                }
+                                            >
+                                                {showStudentPassword ? (
+                                                    <EyeOff className="w-4 h-4 text-gray-500" />
+                                                ) : (
+                                                    <Eye className="w-4 h-4 text-gray-500" />
+                                                )}
+                                            </Button>
                                         </div>
                                     </div>
 
                                     <Button
                                         type="submit"
-                                        className="w-full h-12 mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                                        className="w-full h-12 mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
                                     >
                                         <User className="w-4 h-4 mr-2" />
                                         生徒としてログイン
@@ -185,23 +211,39 @@ export default function LoginPage() {
                                                 パスワードを忘れた場合
                                             </Link>
                                         </div>
+
                                         <div className="relative">
                                             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <Input
                                                 id="admin-password"
-                                                type="password"
+                                                type={showAdminPassword ? 'text' : 'password'}
                                                 placeholder="管理者パスワードを入力"
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
                                                 required
-                                                className="pl-10 h-12 border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl"
+                                                className="pl-10 pr-10 h-12 border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl"
                                             />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
+                                                onClick={() =>
+                                                    setShowAdminPassword(!showAdminPassword)
+                                                }
+                                            >
+                                                {showAdminPassword ? (
+                                                    <EyeOff className="w-4 h-4 text-gray-500" />
+                                                ) : (
+                                                    <Eye className="w-4 h-4 text-gray-500" />
+                                                )}
+                                            </Button>
                                         </div>
                                     </div>
 
                                     <Button
                                         type="submit"
-                                        className="w-full h-12 mt-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                                        className="w-full h-12 mt-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
                                     >
                                         <Shield className="w-4 h-4 mr-2" />
                                         管理者としてログイン

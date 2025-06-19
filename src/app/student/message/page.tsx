@@ -164,6 +164,7 @@ const messageTypeConfig = {
 };
 
 export default function MessagesPage() {
+    const [isLoading, setIsLoading] = useState(false);
     const [messages, setMessages] = useState<Message[]>(mockMessages);
     const [selectedType, setSelectedType] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');

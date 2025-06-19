@@ -20,20 +20,24 @@ import {
     EyeOff,
 } from 'lucide-react';
 import Link from 'next/link';
+import { client } from '@/lib/HonoClient';
 
 export default function LoginPage() {
+    const [isLoading, setIsLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [activeTab, setActiveTab] = useState('student');
     const [showStudentPassword, setStudentShowPassword] = useState(false);
     const [showAdminPassword, setShowAdminPassword] = useState(false);
 
-    const AdminhandleLogin = (e: React.FormEvent) => {
+    const AdminhandleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Login attempt:', { email, password, userType: activeTab });
+        setIsLoading(true);
+
+        const res = client;
     };
 
-    const StudenthandleLogin = (e: React.FormEvent) => {
+    const StudenthandleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log('Login attempt:', { email, password, userType: activeTab });
     };

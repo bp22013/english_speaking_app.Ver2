@@ -50,14 +50,14 @@ interface Student {
     id: number;
     name: string;
     grade: string;
-    email: string;
+    studentID: string;
     avatar?: string;
     lastActive: string;
     progress: number;
 }
 
 // メッセージタイプの定義
-type MessageType = 'announcement' | 'personal' | 'achievement' | 'reminder';
+type MessageType = 'announcement' | 'personal' | 'reminder';
 
 // サンプル生徒データ
 const sampleStudents: Student[] = [
@@ -65,7 +65,7 @@ const sampleStudents: Student[] = [
         id: 1,
         name: '田中太郎',
         grade: '高校2年生',
-        email: 'tanaka@example.com',
+        studentID: 'tanaka@example.com',
         lastActive: '10分前',
         progress: 78,
     },
@@ -73,7 +73,7 @@ const sampleStudents: Student[] = [
         id: 2,
         name: '佐藤花子',
         grade: '高校1年生',
-        email: 'sato@example.com',
+        studentID: 'sato@example.com',
         lastActive: '2時間前',
         progress: 92,
     },
@@ -81,7 +81,7 @@ const sampleStudents: Student[] = [
         id: 3,
         name: '鈴木一郎',
         grade: '中学3年生',
-        email: 'suzuki@example.com',
+        studentID: 'suzuki@example.com',
         lastActive: '昨日',
         progress: 45,
     },
@@ -89,7 +89,7 @@ const sampleStudents: Student[] = [
         id: 4,
         name: '山田美咲',
         grade: '高校3年生',
-        email: 'yamada@example.com',
+        studentID: 'yamada@example.com',
         lastActive: '3時間前',
         progress: 88,
     },
@@ -97,7 +97,7 @@ const sampleStudents: Student[] = [
         id: 5,
         name: '伊藤健太',
         grade: '中学2年生',
-        email: 'ito@example.com',
+        studentID: 'ito@example.com',
         lastActive: '1日前',
         progress: 67,
     },
@@ -191,8 +191,6 @@ export default function AdminMessageCreate() {
                 return { icon: Bell, label: 'お知らせ', color: 'blue' };
             case 'personal':
                 return { icon: User, label: '個人メッセージ', color: 'green' };
-            case 'achievement':
-                return { icon: Award, label: '成果通知', color: 'yellow' };
             case 'reminder':
                 return { icon: Clock, label: 'リマインダー', color: 'purple' };
             default:
@@ -390,29 +388,32 @@ export default function AdminMessageCreate() {
                                                                 )
                                                             }
                                                         >
-                                                            <SelectTrigger>
+                                                            <SelectTrigger className="cursor-pointer">
                                                                 <SelectValue />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="announcement">
+                                                                <SelectItem
+                                                                    value="announcement"
+                                                                    className="cursor-pointer"
+                                                                >
                                                                     <div className="flex items-center">
                                                                         <Bell className="w-4 h-4 mr-2" />
                                                                         お知らせ
                                                                     </div>
                                                                 </SelectItem>
-                                                                <SelectItem value="personal">
+                                                                <SelectItem
+                                                                    value="personal"
+                                                                    className="cursor-pointer"
+                                                                >
                                                                     <div className="flex items-center">
                                                                         <User className="w-4 h-4 mr-2" />
                                                                         個人メッセージ
                                                                     </div>
                                                                 </SelectItem>
-                                                                <SelectItem value="achievement">
-                                                                    <div className="flex items-center">
-                                                                        <Award className="w-4 h-4 mr-2" />
-                                                                        成果通知
-                                                                    </div>
-                                                                </SelectItem>
-                                                                <SelectItem value="reminder">
+                                                                <SelectItem
+                                                                    value="reminder"
+                                                                    className="cursor-pointer"
+                                                                >
                                                                     <div className="flex items-center">
                                                                         <Clock className="w-4 h-4 mr-2" />
                                                                         リマインダー
@@ -432,23 +433,32 @@ export default function AdminMessageCreate() {
                                                                 )
                                                             }
                                                         >
-                                                            <SelectTrigger>
+                                                            <SelectTrigger className="cursor-pointer">
                                                                 <SelectValue />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="low">
+                                                                <SelectItem
+                                                                    value="low"
+                                                                    className="cursor-pointer"
+                                                                >
                                                                     <div className="flex items-center">
                                                                         <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
                                                                         低
                                                                     </div>
                                                                 </SelectItem>
-                                                                <SelectItem value="medium">
+                                                                <SelectItem
+                                                                    value="medium"
+                                                                    className="cursor-pointer"
+                                                                >
                                                                     <div className="flex items-center">
                                                                         <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2" />
                                                                         中
                                                                     </div>
                                                                 </SelectItem>
-                                                                <SelectItem value="high">
+                                                                <SelectItem
+                                                                    value="high"
+                                                                    className="cursor-pointer"
+                                                                >
                                                                     <div className="flex items-center">
                                                                         <div className="w-2 h-2 bg-red-500 rounded-full mr-2" />
                                                                         高
@@ -503,7 +513,7 @@ export default function AdminMessageCreate() {
                                                         min={new Date().toISOString().slice(0, 16)}
                                                     />
                                                     <p className="text-sm text-gray-500">
-                                                        指定しない場合は即座に送信されます
+                                                        ※ 指定しない場合は即座に送信されます
                                                     </p>
                                                 </div>
 

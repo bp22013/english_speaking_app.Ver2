@@ -1,4 +1,4 @@
-/* react-hook-form用フック */
+/* react-hook-form用コンテキスト */
 
 'use client';
 

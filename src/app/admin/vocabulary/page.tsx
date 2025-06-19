@@ -38,6 +38,7 @@ import { AdminNavigation } from '../../components/AdminNavigation';
 import { PageTransition, FadeIn, SoftFadeIn } from '../../components/page-transition';
 import { motion } from 'framer-motion';
 import { speak } from '@/lib/WebSpeechApi';
+import { VocabularyDownloadButton } from '../../components/VocabularyDataDownloadButton';
 import Link from 'next/link';
 
 // サンプル単語データ
@@ -45,9 +46,7 @@ interface VocabularyItem {
     id: number;
     word: string;
     meaning: string;
-    example: string;
-    category: string;
-    difficulty: 'easy' | 'medium' | 'hard';
+    level: number; // 1-10のレベル
     addedAt: string;
 }
 
@@ -56,61 +55,68 @@ const sampleVocabulary: VocabularyItem[] = [
         id: 1,
         word: 'apple',
         meaning: 'りんご',
-        example: 'I eat an apple every day.',
-        category: '果物',
-        difficulty: 'easy',
+        level: 1,
         addedAt: '2024年1月15日',
     },
     {
         id: 2,
         word: 'computer',
         meaning: 'コンピューター',
-        example: 'I use my computer to study English.',
-        category: 'テクノロジー',
-        difficulty: 'medium',
+        level: 4,
         addedAt: '2024年1月14日',
     },
     {
         id: 3,
         word: 'book',
         meaning: '本',
-        example: 'I read a book before bed.',
-        category: '文房具',
-        difficulty: 'easy',
+        level: 1,
         addedAt: '2024年1月12日',
     },
     {
         id: 4,
         word: 'university',
         meaning: '大学',
-        example: 'She studies at the university.',
-        category: '教育',
-        difficulty: 'medium',
+        level: 5,
         addedAt: '2024年1月10日',
     },
     {
         id: 5,
         word: 'algorithm',
         meaning: 'アルゴリズム',
-        example: 'The algorithm solves the problem efficiently.',
-        category: 'テクノロジー',
-        difficulty: 'hard',
+        level: 8,
         addedAt: '2024年1月8日',
+    },
+    {
+        id: 6,
+        word: 'sophisticated',
+        meaning: '洗練された',
+        level: 9,
+        addedAt: '2024年1月6日',
+    },
+    {
+        id: 7,
+        word: 'cat',
+        meaning: '猫',
+        level: 1,
+        addedAt: '2024年1月5日',
+    },
+    {
+        id: 8,
+        word: 'phenomenal',
+        meaning: '驚異的な',
+        level: 10,
+        addedAt: '2024年1月3日',
     },
 ];
 
 export default function AdminVocabulary() {
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState<string>('all');
-    const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
+    const [selectedLevel, setSelectedLevel] = useState<string>('all');
     const [sortField, setSortField] = useState<string>('word');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [vocabulary, setVocabulary] = useState<VocabularyItem[]>(sampleVocabulary);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedVocabId, setSelectedVocabId] = useState<number | null>(null);
-
-    // カテゴリーの一覧を取得
-    const categories = Array.from(new Set(vocabulary.map((item) => item.category)));
 
     // フィルタリングと並び替え
     const filteredVocabulary = vocabulary
@@ -118,11 +124,8 @@ export default function AdminVocabulary() {
             const matchesSearch =
                 item.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 item.meaning.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesCategory =
-                selectedCategory === 'all' || item.category === selectedCategory;
-            const matchesDifficulty =
-                selectedDifficulty === 'all' || item.difficulty === selectedDifficulty;
-            return matchesSearch && matchesCategory && matchesDifficulty;
+            const matchesLevel = selectedLevel === 'all' || item.level === parseInt(selectedLevel);
+            return matchesSearch && matchesLevel;
         })
         .sort((a, b) => {
             if (sortField === 'word') {
@@ -133,11 +136,8 @@ export default function AdminVocabulary() {
                 return sortDirection === 'asc'
                     ? a.meaning.localeCompare(b.meaning)
                     : b.meaning.localeCompare(a.meaning);
-            } else if (sortField === 'difficulty') {
-                const difficultyOrder = { easy: 1, medium: 2, hard: 3 };
-                return sortDirection === 'asc'
-                    ? difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty]
-                    : difficultyOrder[b.difficulty] - difficultyOrder[a.difficulty];
+            } else if (sortField === 'level') {
+                return sortDirection === 'asc' ? a.level - b.level : b.level - a.level;
             } else if (sortField === 'addedAt') {
                 return sortDirection === 'asc'
                     ? new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()
@@ -163,30 +163,22 @@ export default function AdminVocabulary() {
         }
     };
 
-    const getDifficultyColor = (difficulty: string) => {
-        switch (difficulty) {
-            case 'easy':
-                return 'bg-green-100 text-green-700 border-green-100';
-            case 'medium':
-                return 'bg-yellow-100 text-yellow-700 border-yellow-100';
-            case 'hard':
-                return 'bg-red-100 text-red-700 border-red-100';
-            default:
-                return 'bg-gray-100 text-gray-700 border-gray-100';
+    const getLevelColor = (level: number) => {
+        if (level <= 2) {
+            return 'bg-green-100 text-green-700 border-green-100';
+        } else if (level <= 4) {
+            return 'bg-lime-100 text-lime-700 border-lime-100';
+        } else if (level <= 6) {
+            return 'bg-yellow-100 text-yellow-700 border-yellow-100';
+        } else if (level <= 8) {
+            return 'bg-orange-100 text-orange-700 border-orange-100';
+        } else {
+            return 'bg-red-100 text-red-700 border-red-100';
         }
     };
 
-    const getDifficultyLabel = (difficulty: string) => {
-        switch (difficulty) {
-            case 'easy':
-                return '簡単';
-            case 'medium':
-                return '普通';
-            case 'hard':
-                return '難しい';
-            default:
-                return difficulty;
-        }
+    const getLevelLabel = (level: number) => {
+        return `レベル ${level}`;
     };
 
     const handleSpeak = (text: string) => {
@@ -226,12 +218,18 @@ export default function AdminVocabulary() {
                                     transition={{ delay: 0.4, duration: 0.6 }}
                                     className="mt-4 md:mt-0"
                                 >
-                                    <Button asChild className="bg-purple-600 hover:bg-purple-700">
-                                        <Link href="/admin/vocabulary/create">
-                                            <Plus className="mr-2 h-4 w-4" />
-                                            単語を追加
-                                        </Link>
-                                    </Button>
+                                    <div className="space-x-5">
+                                        <VocabularyDownloadButton data={sampleVocabulary} />
+                                        <Button
+                                            asChild
+                                            className="bg-purple-600 hover:bg-purple-700"
+                                        >
+                                            <Link href="/admin/vocabulary/create">
+                                                <Plus className="mr-2 h-4 w-4" />
+                                                単語を追加
+                                            </Link>
+                                        </Button>
+                                    </div>
                                 </motion.div>
                             </div>
                         </FadeIn>
@@ -252,51 +250,16 @@ export default function AdminVocabulary() {
                                         </div>
                                         <div className="flex gap-2">
                                             <Select
-                                                value={selectedCategory}
-                                                onValueChange={setSelectedCategory}
-                                            >
-                                                <SelectTrigger className="w-[180px] cursor-pointer">
-                                                    <div className="flex items-center">
-                                                        <Filter className="w-4 h-4 mr-2" />
-                                                        <span>
-                                                            {selectedCategory === 'all'
-                                                                ? '全てのカテゴリー'
-                                                                : selectedCategory}
-                                                        </span>
-                                                    </div>
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem
-                                                        value="all"
-                                                        className="cursor-pointer"
-                                                    >
-                                                        全てのカテゴリー
-                                                    </SelectItem>
-                                                    {categories.map((category) => (
-                                                        <SelectItem
-                                                            key={category}
-                                                            value={category}
-                                                            className="cursor-pointer"
-                                                        >
-                                                            {category}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-
-                                            <Select
-                                                value={selectedDifficulty}
-                                                onValueChange={setSelectedDifficulty}
+                                                value={selectedLevel}
+                                                onValueChange={setSelectedLevel}
                                             >
                                                 <SelectTrigger className="w-[150px] cursor-pointer">
                                                     <div className="flex items-center">
                                                         <Filter className="w-4 h-4 mr-2" />
                                                         <span>
-                                                            {selectedDifficulty === 'all'
-                                                                ? '全ての難易度'
-                                                                : getDifficultyLabel(
-                                                                      selectedDifficulty
-                                                                  )}
+                                                            {selectedLevel === 'all'
+                                                                ? '全てのレベル'
+                                                                : `レベル ${selectedLevel}`}
                                                         </span>
                                                     </div>
                                                 </SelectTrigger>
@@ -305,26 +268,19 @@ export default function AdminVocabulary() {
                                                         value="all"
                                                         className="cursor-pointer"
                                                     >
-                                                        全ての難易度
+                                                        全てのレベル
                                                     </SelectItem>
-                                                    <SelectItem
-                                                        value="easy"
-                                                        className="cursor-pointer"
-                                                    >
-                                                        簡単
-                                                    </SelectItem>
-                                                    <SelectItem
-                                                        value="medium"
-                                                        className="cursor-pointer"
-                                                    >
-                                                        普通
-                                                    </SelectItem>
-                                                    <SelectItem
-                                                        value="hard"
-                                                        className="cursor-pointer"
-                                                    >
-                                                        難しい
-                                                    </SelectItem>
+                                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(
+                                                        (level) => (
+                                                            <SelectItem
+                                                                key={level}
+                                                                value={level.toString()}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                レベル {level}
+                                                            </SelectItem>
+                                                        )
+                                                    )}
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -370,15 +326,12 @@ export default function AdminVocabulary() {
                                                             <ArrowUpDown className="ml-1 h-4 w-4" />
                                                         </div>
                                                     </th>
-                                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                                                        カテゴリー
-                                                    </th>
                                                     <th
                                                         className="px-4 py-3 text-left text-sm font-medium text-gray-500 cursor-pointer"
-                                                        onClick={() => handleSort('difficulty')}
+                                                        onClick={() => handleSort('level')}
                                                     >
                                                         <div className="flex items-center">
-                                                            <span>難易度</span>
+                                                            <span>レベル</span>
                                                             <ArrowUpDown className="ml-1 h-4 w-4" />
                                                         </div>
                                                     </th>
@@ -427,20 +380,13 @@ export default function AdminVocabulary() {
                                                             {item.meaning}
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <Badge variant="outline">
-                                                                {item.category}
-                                                            </Badge>
-                                                        </td>
-                                                        <td className="px-4 py-4">
                                                             <Badge
                                                                 variant="outline"
-                                                                className={getDifficultyColor(
-                                                                    item.difficulty
+                                                                className={getLevelColor(
+                                                                    item.level
                                                                 )}
                                                             >
-                                                                {getDifficultyLabel(
-                                                                    item.difficulty
-                                                                )}
+                                                                {getLevelLabel(item.level)}
                                                             </Badge>
                                                         </td>
                                                         <td className="px-4 py-4 text-gray-500 text-sm">

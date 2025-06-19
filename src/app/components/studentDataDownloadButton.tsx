@@ -69,10 +69,10 @@ export const StudentDataDownload = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
                 <DropdownMenuItem onClick={() => handleDownload('csv')} className="cursor-pointer">
-                    CSV形式でダウンロード（.csv）
+                    CSV形式（.csv）でダウンロード
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleDownload('xlsx')} className="cursor-pointer">
-                    XLSX形式でダウンロード（.xlsx）
+                    Excel形式（.xlsx）でダウンロード
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

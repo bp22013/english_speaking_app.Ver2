@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google';
 import { NextFont } from 'next/dist/compiled/@next/font';
 import React, { ReactNode, Suspense } from 'react';
 import { ToasterContext } from './context/ToastContext';
+import { ClerkProvider } from '@clerk/nextjs';
+import { jaJP } from '@/lib/ClerkLocalization';
 import './styles/globals.css';
 
 const inter: NextFont = Inter({ subsets: ['latin'] });
@@ -14,13 +16,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
     return (
-        <html lang="en">
-            <Suspense>
-                <body className={inter.className}>
-                    <ToasterContext />
-                    <div>{children}</div>
-                </body>
-            </Suspense>
-        </html>
+        <ClerkProvider localization={jaJP}>
+            <html lang="en">
+                <Suspense>
+                    <body className={inter.className}>
+                        <ToasterContext />
+                        <div>{children}</div>
+                    </body>
+                </Suspense>
+            </html>
+        </ClerkProvider>
     );
 }

@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/localizations": "^3.16.5",
+    "@clerk/nextjs": "^6.22.0",
     "@hookform/resolvers": "^5.1.1",
     "@mui/material": "^7.1.1",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -24,6 +26,7 @@
     "@radix-ui/react-tabs": "^1.1.12",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.1",
+    "clerk": "^0.8.3",
     "clsx": "^2.1.1",
     "framer-motion": "^12.18.1",
     "hono": "^4.8.0",

@@ -33,13 +33,13 @@ export default function LoginPage() {
     const AdminhandleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-
-        const res = client;
     };
 
     const StudenthandleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log('Login attempt:', { email, password, userType: activeTab });
+
+        setIsLoading(true);
     };
 
     return (
@@ -161,6 +161,7 @@ export default function LoginPage() {
 
                                     <Button
                                         type="submit"
+                                        disabled={isLoading}
                                         className="w-full h-12 mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
                                     >
                                         <User className="w-4 h-4 mr-2" />

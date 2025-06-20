@@ -20,12 +20,15 @@ import {
     EyeOff,
 } from 'lucide-react';
 import Link from 'next/link';
-import { client } from '@/lib/HonoClient';
+import { supabase } from '@/lib/SupabaseClient';
+import toast from 'react-hot-toast';
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
+    const [studentId, setStudentId] = useState('');
+    const [studentPassword, setStudentPassword] = useState('');
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [adminPassword, setAdminPassword] = useState('');
     const [activeTab, setActiveTab] = useState('student');
     const [showStudentPassword, setStudentShowPassword] = useState(false);
     const [showAdminPassword, setShowAdminPassword] = useState(false);
@@ -33,11 +36,27 @@ export default function LoginPage() {
     const AdminhandleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: adminPassword,
+            });
+
+            if (error) {
+                toast.error(`ログイン中にエラーが発生しました: ${error}`);
+            } else {
+                toast.success('ログインしました!');
+            }
+        } catch (error) {
+            toast.error(`不明なエラーが発生しました: ${error}`);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const StudenthandleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Login attempt:', { email, password, userType: activeTab });
 
         setIsLoading(true);
     };
@@ -95,7 +114,7 @@ export default function LoginPage() {
                                 <form onSubmit={StudenthandleLogin} className="space-y-5">
                                     <div className="space-y-2">
                                         <Label
-                                            htmlFor="student-email"
+                                            htmlFor="student-studentId"
                                             className="text-sm font-medium text-gray-700"
                                         >
                                             生徒ID
@@ -104,11 +123,12 @@ export default function LoginPage() {
                                             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <Input
                                                 autoFocus
-                                                id="student-email"
+                                                id="student-studentId"
+                                                disabled={isLoading}
                                                 type="text"
                                                 placeholder="生徒IDを入力"
-                                                value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
+                                                value={studentId}
+                                                onChange={(e) => setStudentId(e.target.value)}
                                                 required
                                                 className="pl-10 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
                                             />
@@ -135,15 +155,17 @@ export default function LoginPage() {
                                             <Input
                                                 id="student-password"
                                                 type={showStudentPassword ? 'text' : 'password'}
+                                                disabled={isLoading}
                                                 placeholder="パスワードを入力"
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
+                                                value={studentPassword}
+                                                onChange={(e) => setStudentPassword(e.target.value)}
                                                 required
                                                 className="pl-10 pr-10 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
                                             />
                                             <Button
                                                 type="button"
                                                 variant="ghost"
+                                                disabled={isLoading}
                                                 size="icon"
                                                 className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
                                                 onClick={() =>
@@ -192,6 +214,7 @@ export default function LoginPage() {
                                             <Input
                                                 id="admin-email"
                                                 type="email"
+                                                disabled={isLoading}
                                                 placeholder="admin@example.com"
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
@@ -222,15 +245,17 @@ export default function LoginPage() {
                                             <Input
                                                 id="admin-password"
                                                 type={showAdminPassword ? 'text' : 'password'}
+                                                disabled={isLoading}
                                                 placeholder="管理者パスワードを入力"
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
+                                                value={adminPassword}
+                                                onChange={(e) => setAdminPassword(e.target.value)}
                                                 required
                                                 className="pl-10 pr-10 h-12 border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl"
                                             />
                                             <Button
                                                 type="button"
                                                 variant="ghost"
+                                                disabled={isLoading}
                                                 size="icon"
                                                 className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
                                                 onClick={() =>
@@ -248,6 +273,7 @@ export default function LoginPage() {
 
                                     <Button
                                         type="submit"
+                                        disabled={isLoading}
                                         className="w-full h-12 mt-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
                                     >
                                         <Shield className="w-4 h-4 mr-2" />

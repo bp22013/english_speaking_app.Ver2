@@ -1,7 +1,11 @@
 import { Hono } from 'hono';
 
-export const adminLogin = new Hono();
+const adminLogin = new Hono()
+    .get('/adminLogin', (c) => {
+        return c.json({ message: 'Admin Logged in!' });
+    })
+    .get('/studentLogin', (c) => {
+        return c.json({ message: 'Admin Logged in!' });
+    });
 
-adminLogin.post('/', (c) => {
-    return c.json({});
-});
+export default adminLogin;

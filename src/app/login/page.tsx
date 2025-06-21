@@ -3,6 +3,7 @@
 import type React from 'react';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,9 @@ import {
 import Link from 'next/link';
 import { supabase } from '@/lib/SupabaseClient';
 import toast from 'react-hot-toast';
+import { client } from '@/lib/HonoClient';
+import { resolve } from 'path';
+import { rejects } from 'assert';
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -33,32 +37,73 @@ export default function LoginPage() {
     const [showStudentPassword, setStudentShowPassword] = useState(false);
     const [showAdminPassword, setShowAdminPassword] = useState(false);
 
-    const AdminhandleLogin = async (e: React.FormEvent) => {
+    const router = useRouter();
+
+    const adminHandleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
-        try {
-            const { error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: adminPassword,
-            });
+        toast.promise(
+            new Promise(async (resolve, reject) => {
+                try {
+                    const { error } = await supabase.auth.signInWithPassword({
+                        email: email,
+                        password: adminPassword,
+                    });
 
-            if (error) {
-                toast.error(`ログイン中にエラーが発生しました: ${error}`);
-            } else {
-                toast.success('ログインしました!');
+                    if (error) {
+                        reject(`ログイン中にエラーが発生しました: ${error}`);
+                    } else {
+                        resolve('ログインしました!');
+                        router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/dashboard`);
+                    }
+                } catch (error) {
+                    reject(`不明なエラーが発生しました: ${error}`);
+                } finally {
+                    setIsLoading(false);
+                }
+            }),
+            {
+                loading: 'ログインしています...',
+                success: 'ログインしました!',
+                error: (message: string) => message,
             }
-        } catch (error) {
-            toast.error(`不明なエラーが発生しました: ${error}`);
-        } finally {
-            setIsLoading(false);
-        }
+        );
     };
 
-    const StudenthandleLogin = async (e: React.FormEvent) => {
+    const studentHandleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-
         setIsLoading(true);
+
+        toast.promise(
+            new Promise(async (resolve, reject) => {
+                try {
+                    const res = await client.auth.studentLogin.$post({
+                        form: {
+                            body: { studentId, password: studentPassword },
+                        },
+                    });
+
+                    const data = await res.json();
+
+                    if (data.flg) {
+                        resolve(data.message);
+                        router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/student/dashboard`);
+                    } else {
+                        reject(data.error);
+                    }
+                } catch (error) {
+                    reject(`不明なエラーが発生しました: ${error}`);
+                } finally {
+                    setIsLoading(false);
+                }
+            }),
+            {
+                loading: 'ログインしています...',
+                success: 'ログインしました!',
+                error: (message: string) => message,
+            }
+        );
     };
 
     return (
@@ -111,7 +156,7 @@ export default function LoginPage() {
                                     <h3 className="font-semibold text-gray-900">生徒ログイン</h3>
                                 </div>
 
-                                <form onSubmit={StudenthandleLogin} className="space-y-5">
+                                <form onSubmit={studentHandleLogin} className="space-y-5">
                                     <div className="space-y-2">
                                         <Label
                                             htmlFor="student-studentId"
@@ -201,7 +246,7 @@ export default function LoginPage() {
                                     <h3 className="font-semibold text-gray-900">管理者ログイン</h3>
                                 </div>
 
-                                <form onSubmit={AdminhandleLogin} className="space-y-5">
+                                <form onSubmit={adminHandleLogin} className="space-y-5">
                                     <div className="space-y-2">
                                         <Label
                                             htmlFor="admin-email"

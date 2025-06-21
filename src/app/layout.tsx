@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { NextFont } from 'next/dist/compiled/@next/font';
 import React, { ReactNode, Suspense } from 'react';
 import { ToasterContext } from './context/ToastContext';
+import { SessionProvider } from 'next-auth/react';
 import './styles/globals.css';
 
 const inter: NextFont = Inter({ subsets: ['latin'] });

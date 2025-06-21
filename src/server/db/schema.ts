@@ -102,22 +102,17 @@ export const adminMessages = pgTable('admin_messages', {
     sentAt: timestamp('sent_at', { withTimezone: true }),
 });
 
-// 認証用ユーザー（NextAuth用など）
-export const users = pgTable('users', {
+export const users = pgTable('user', {
     id: text('id').primaryKey(),
-    name: text('name'),
-    email: text('email').unique(),
-    emailVerified: timestamp('emailVerified', { withTimezone: true }),
+    studentId: text('student_id').unique().notNull(),
+    name: text('name').notNull(),
+    passwordHash: text('password_hash').notNull(),
     image: text('image'),
-    studentId: text('student_id').unique(),
 });
 
-// セッション情報
-export const sessions = pgTable('sessions', {
-    sessionToken: text('sessionToken').primaryKey(),
-    userId: text('userId')
-        .references(() => users.id)
-        .notNull(),
-    expires: timestamp('expires', { withTimezone: true }),
-    isActive: boolean('is_active').default(true),
+export const sessions = pgTable('session', {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    isActive: boolean('is_active').notNull().default(true),
 });

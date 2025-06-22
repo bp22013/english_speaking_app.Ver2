@@ -4,7 +4,7 @@ import { csrf } from 'hono/csrf';
 import { logger } from 'hono/logger';
 import authApp from './routes/auth';
 
-const app = new Hono();
+const app = new Hono().basePath('/api');
 
 app.use('*', cors());
 app.use(csrf());

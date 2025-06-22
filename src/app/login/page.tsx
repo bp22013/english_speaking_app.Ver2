@@ -1,3 +1,5 @@
+/* ログインフォームページ */
+
 'use client';
 
 import type React from 'react';
@@ -24,8 +26,6 @@ import Link from 'next/link';
 import { supabase } from '@/lib/SupabaseClient';
 import toast from 'react-hot-toast';
 import { client } from '@/lib/HonoClient';
-import { resolve } from 'path';
-import { rejects } from 'assert';
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +39,7 @@ export default function LoginPage() {
 
     const router = useRouter();
 
+    // 管理者のログイン用関数（supabase）
     const adminHandleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -71,6 +72,7 @@ export default function LoginPage() {
         );
     };
 
+    // 生徒のログイン用関数（lucia）
     const studentHandleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -78,10 +80,8 @@ export default function LoginPage() {
         toast.promise(
             new Promise(async (resolve, reject) => {
                 try {
-                    const res = await client.auth.studentLogin.$post({
-                        form: {
-                            body: { studentId, password: studentPassword },
-                        },
+                    const res = await client.api.auth.studentLogin.$post({
+                        json: { studentId, password: studentPassword },
                     });
 
                     const data = await res.json();
@@ -189,7 +189,7 @@ export default function LoginPage() {
                                                 パスワード
                                             </Label>
                                             <Link
-                                                href="/forgot-password"
+                                                href="/student/forgetPassword"
                                                 className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium"
                                             >
                                                 パスワードを忘れた場合
@@ -278,7 +278,7 @@ export default function LoginPage() {
                                                 管理者パスワード
                                             </Label>
                                             <Link
-                                                href="/admin/forgot-password"
+                                                href="/admin/forgetPassword"
                                                 className="text-sm text-purple-600 hover:text-purple-800 hover:underline font-medium"
                                             >
                                                 パスワードを忘れた場合

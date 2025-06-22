@@ -8,7 +8,7 @@ import { lucia } from '@/lib/auth/lucia';
 import { setCookie } from 'hono/cookie';
 import bcrypt from 'bcryptjs';
 
-export const studentLogin = new Hono().post('/studentLogin', async (c) => {
+const studentLogin = new Hono().post('/studentLogin', async (c) => {
     try {
         const body = await c.req.json();
         const { studentId, password } = body;
@@ -30,6 +30,8 @@ export const studentLogin = new Hono().post('/studentLogin', async (c) => {
         return c.json({ message: 'ログインしました!', flg: true });
     } catch (error) {
         console.log(`例外エラー: ${error}`);
-        return c.json({ error: 'サーバーエラーが発生しました', flg: false }, 500);
+        return c.json({ error: `サーバーエラーが発生しました ${error}`, flg: false }, 500);
     }
 });
+
+export default studentLogin;

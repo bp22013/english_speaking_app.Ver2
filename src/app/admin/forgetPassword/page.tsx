@@ -57,7 +57,7 @@ export default function AdminPasswordReset() {
 
         try {
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/admin/reset-password-confirm`,
+                redirectTo: `${window.location.origin}/admin/forgetPassword/forgetPasswordConfirm`,
             });
 
             if (error) {
@@ -65,6 +65,7 @@ export default function AdminPasswordReset() {
             }
 
             setIsSuccess(true);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             console.error('Password reset error:', err);
 
@@ -141,8 +142,8 @@ export default function AdminPasswordReset() {
                         </div>
 
                         <div className="pt-4 border-t">
-                            <Link href="/admin/login">
-                                <Button variant="outline" className="w-full">
+                            <Link href="/">
+                                <Button variant="outline" className="w-full cursor-pointer">
                                     <ArrowLeft className="w-4 h-4 mr-2" />
                                     ログイン画面に戻る
                                 </Button>
@@ -223,7 +224,7 @@ export default function AdminPasswordReset() {
 
                         <Button
                             type="submit"
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                             disabled={isLoading || !!validationError || !email}
                         >
                             {isLoading ? (
@@ -242,10 +243,10 @@ export default function AdminPasswordReset() {
 
                     <div className="mt-6 pt-6 border-t border-gray-200">
                         <div className="text-center">
-                            <Link href="/admin/login">
+                            <Link href="/">
                                 <Button
                                     variant="ghost"
-                                    className="text-gray-600 hover:text-gray-800"
+                                    className="text-gray-600 hover:text-gray-800 cursor-pointer"
                                 >
                                     <ArrowLeft className="w-4 h-4 mr-2" />
                                     ログイン画面に戻る

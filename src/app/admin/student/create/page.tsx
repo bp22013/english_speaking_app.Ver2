@@ -20,10 +20,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserPlus, Eye, EyeOff, AlertCircle, ArrowLeft, Save, Camera, X } from 'lucide-react';
 import { AdminNavigation } from '../../../components/AdminNavigation';
+import { adminStudentRegisterFormData, adminStudentRegisterValidation } from '@/lib/validation';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, SubmitHandler, FieldError, Controller } from 'react-hook-form';
 import { PageTransition, FadeIn, SoftFadeIn } from '../../../components/page-transition';
 import { motion } from 'framer-motion';
 import { avatarPlaceholder } from '../../../components/Icon/avatarPlaceholder';
 import toast from 'react-hot-toast';
+import { client } from '@/lib/HonoClient';
 
 // フォームデータの型定義
 interface StudentFormData {
@@ -45,11 +49,6 @@ interface StudentFormData {
     avatar?: File;
 }
 
-// バリデーションエラーの型
-interface ValidationErrors {
-    [key: string]: string;
-}
-
 export default function AdminStudentCreate() {
     const [formData, setFormData] = useState<StudentFormData>({
         firstName: '',
@@ -62,7 +61,6 @@ export default function AdminStudentCreate() {
         notes: '',
     });
 
-    const [errors, setErrors] = useState<ValidationErrors>({});
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -79,48 +77,32 @@ export default function AdminStudentCreate() {
         '高校3年生',
     ];
 
-    // フォームデータの更新
-    const updateFormData = (field: keyof StudentFormData, value: any) => {
-        setFormData((prev) => ({ ...prev, [field]: value }));
-        // エラーをクリア
-        if (errors[field]) {
-            setErrors((prev) => ({ ...prev, [field]: '' }));
-        }
-    };
-
-    // バリデーション
-    const validateForm = (): boolean => {
-        const newErrors: ValidationErrors = {};
-
-        // 基本情報のバリデーション
-        if (!formData.firstName.trim()) newErrors.firstName = '名前（名）は必須です';
-        if (!formData.lastName.trim()) newErrors.lastName = '名前（姓）は必須です';
-        if (!formData.grade) newErrors.grade = '学年は必須です';
-        if (!formData.studentId.trim()) newErrors.studentId = '学籍番号は必須です';
-
-        // パスワードのバリデーション
-        if (!formData.password) {
-            newErrors.password = 'パスワードは必須です';
-        } else if (formData.password.length < 8) {
-            newErrors.password = 'パスワードは8文字以上で入力してください';
-        }
-        if (formData.password !== formData.confirmPassword) {
-            newErrors.confirmPassword = 'パスワードが一致しません';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
+    const {
+        register,
+        handleSubmit,
+        control,
+        setValue,
+        formState: { errors },
+    } = useForm<adminStudentRegisterFormData>({
+        resolver: zodResolver(adminStudentRegisterValidation),
+        defaultValues: {
+            firstName: '',
+            lastName: '',
+            grade: '',
+            studentId: '',
+            enrollmentDate: new Date().toISOString().split('T')[0],
+            password: '',
+            confirmPassword: '',
+            notes: '',
+            avatar: undefined,
+        },
+    });
 
     // アバター画像の処理
     const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                // 5MB制限
-                setErrors((prev) => ({ ...prev, avatar: 'ファイルサイズは5MB以下にしてください' }));
-                return;
-            }
+            setValue('avatar', file);
 
             setFormData((prev) => ({ ...prev, avatar: file }));
 
@@ -134,33 +116,15 @@ export default function AdminStudentCreate() {
     };
 
     // フォーム送信
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!validateForm()) {
-            return;
-        }
-
+    const onSubmit: SubmitHandler<adminStudentRegisterFormData> = async (data) => {
         setIsLoading(true);
 
         try {
-            // ここで実際のAPI呼び出しを行う
-            await new Promise((resolve) => setTimeout(resolve, 2000)); // 模擬的な遅延
-
-            // 成功時の処理
-            alert('生徒が正常に追加されました！');
-
-            // フォームをリセット
-            setFormData({
-                firstName: '',
-                lastName: '',
-                grade: '',
-                studentId: '',
-                enrollmentDate: new Date().toISOString().split('T')[0],
-                password: '',
-                confirmPassword: '',
-                notes: '',
+            const res = await client.api.auth.studentRegister.$get({
+                json: {},
             });
+
+            const data = await res.json();
             setAvatarPreview(null);
             setCurrentTab('basic');
         } catch {
@@ -176,7 +140,6 @@ export default function AdminStudentCreate() {
         const random = Math.floor(Math.random() * 10000)
             .toString()
             .padStart(4, '0');
-        updateFormData('studentId', `${year}${random}`);
     };
 
     // パスワードを自動生成する関数
@@ -186,8 +149,6 @@ export default function AdminStudentCreate() {
         for (let i = 0; i < 12; i++) {
             password += chars.charAt(Math.floor(Math.random() * chars.length));
         }
-        updateFormData('password', password);
-        updateFormData('confirmPassword', password);
     };
 
     return (
@@ -232,7 +193,7 @@ export default function AdminStudentCreate() {
 
                         {/* フォーム */}
                         <SoftFadeIn delay={0.2}>
-                            <form onSubmit={handleSubmit}>
+                            <form onSubmit={handleSubmit(onSubmit)}>
                                 <Card className="hover:shadow-lg transition-shadow duration-300">
                                     <CardHeader>
                                         <CardTitle className="flex items-center space-x-2">
@@ -262,7 +223,12 @@ export default function AdminStudentCreate() {
                                                 {/* アバター設定 */}
                                                 <div className="flex items-center space-x-6 mt-5">
                                                     <div className="relative">
-                                                        <Avatar className="w-24 h-24">
+                                                        <Avatar
+                                                            className="w-24 h-24"
+                                                            onChange={(value) =>
+                                                                setValue('avatar', value)
+                                                            }
+                                                        >
                                                             <AvatarImage
                                                                 src={avatarPreview || undefined}
                                                             />
@@ -287,6 +253,16 @@ export default function AdminStudentCreate() {
                                                         <p className="text-sm text-gray-500">
                                                             JPG、PNG形式（最大5MB）
                                                         </p>
+                                                        {errors.avatar && (
+                                                            <p className="text-sm text-red-600 flex items-center mt-1">
+                                                                <AlertCircle className="w-4 h-4 mr-1" />
+                                                                {
+                                                                    (errors.avatar as FieldError)
+                                                                        ?.message
+                                                                }
+                                                            </p>
+                                                        )}
+
                                                         {avatarPreview && (
                                                             <Button
                                                                 type="button"
@@ -318,12 +294,7 @@ export default function AdminStudentCreate() {
                                                             value={formData.lastName}
                                                             autoFocus
                                                             disabled={isLoading}
-                                                            onChange={(e) =>
-                                                                updateFormData(
-                                                                    'lastName',
-                                                                    e.target.value
-                                                                )
-                                                            }
+                                                            {...register('lastName')}
                                                             placeholder="田中"
                                                             className={
                                                                 errors.lastName
@@ -334,7 +305,7 @@ export default function AdminStudentCreate() {
                                                         {errors.lastName && (
                                                             <p className="text-sm text-red-600 flex items-center">
                                                                 <AlertCircle className="w-4 h-4 mr-1" />
-                                                                {errors.lastName}
+                                                                {errors.lastName.message}
                                                             </p>
                                                         )}
                                                     </div>
@@ -344,12 +315,6 @@ export default function AdminStudentCreate() {
                                                         <Input
                                                             id="firstName"
                                                             value={formData.firstName}
-                                                            onChange={(e) =>
-                                                                updateFormData(
-                                                                    'firstName',
-                                                                    e.target.value
-                                                                )
-                                                            }
                                                             placeholder="太郎"
                                                             disabled={isLoading}
                                                             className={
@@ -357,11 +322,12 @@ export default function AdminStudentCreate() {
                                                                     ? 'border-red-500'
                                                                     : ''
                                                             }
+                                                            {...register('firstName')}
                                                         />
                                                         {errors.firstName && (
                                                             <p className="text-sm text-red-600 flex items-center">
                                                                 <AlertCircle className="w-4 h-4 mr-1" />
-                                                                {errors.firstName}
+                                                                {errors.firstName.message}
                                                             </p>
                                                         )}
                                                     </div>
@@ -369,59 +335,81 @@ export default function AdminStudentCreate() {
                                                     {/* 学年 */}
                                                     <div className="space-y-2">
                                                         <Label htmlFor="grade">学年 *</Label>
-                                                        <Select
-                                                            value={formData.grade}
-                                                            onValueChange={(value) =>
-                                                                updateFormData('grade', value)
-                                                            }
-                                                        >
-                                                            <SelectTrigger
-                                                                className={
-                                                                    errors.grade
-                                                                        ? 'border-red-500 cursor-pointer'
-                                                                        : 'cursor-pointer'
-                                                                }
-                                                                disabled={isLoading}
-                                                            >
-                                                                <SelectValue placeholder="学年を選択" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {gradeOptions.map((grade) => (
-                                                                    <SelectItem
-                                                                        key={grade}
-                                                                        value={grade}
-                                                                        className="cursor-pointer"
+                                                        <Controller
+                                                            control={control}
+                                                            name="grade"
+                                                            render={({ field }) => (
+                                                                <Select
+                                                                    value={field.value}
+                                                                    onValueChange={(value) =>
+                                                                        field.onChange(value)
+                                                                    }
+                                                                    disabled={isLoading}
+                                                                >
+                                                                    <SelectTrigger
+                                                                        className={
+                                                                            errors.grade
+                                                                                ? 'border-red-500 cursor-pointer'
+                                                                                : 'cursor-pointer'
+                                                                        }
                                                                     >
-                                                                        {grade}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
+                                                                        <SelectValue placeholder="学年を選択" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {gradeOptions.map(
+                                                                            (grade) => (
+                                                                                <SelectItem
+                                                                                    key={grade}
+                                                                                    value={grade}
+                                                                                    className="cursor-pointer"
+                                                                                >
+                                                                                    {grade}
+                                                                                </SelectItem>
+                                                                            )
+                                                                        )}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )}
+                                                        />
+
                                                         {errors.grade && (
                                                             <p className="text-sm text-red-600 flex items-center">
                                                                 <AlertCircle className="w-4 h-4 mr-1" />
-                                                                {errors.grade}
+                                                                {errors.grade.message}
                                                             </p>
                                                         )}
                                                     </div>
 
-                                                    {/* 入学日 */}
+                                                    {/* 登録日 */}
                                                     <div className="space-y-2">
                                                         <Label htmlFor="enrollmentDate">
                                                             登録日
                                                         </Label>
-                                                        <Input
-                                                            id="enrollmentDate"
-                                                            type="date"
-                                                            disabled={isLoading}
-                                                            value={formData.enrollmentDate}
-                                                            onChange={(e) =>
-                                                                updateFormData(
-                                                                    'enrollmentDate',
-                                                                    e.target.value
-                                                                )
-                                                            }
+                                                        <Controller
+                                                            name="enrollmentDate"
+                                                            control={control}
+                                                            render={({ field }) => (
+                                                                <Input
+                                                                    id="enrollmentDate"
+                                                                    type="date"
+                                                                    disabled={isLoading}
+                                                                    className={
+                                                                        errors.enrollmentDate
+                                                                            ? 'border-red-500'
+                                                                            : ''
+                                                                    }
+                                                                    value={field.value ?? ''} // ← ここがポイント
+                                                                    onChange={field.onChange}
+                                                                />
+                                                            )}
                                                         />
+
+                                                        {errors.enrollmentDate && (
+                                                            <p className="text-sm text-red-600 flex items-center">
+                                                                <AlertCircle className="w-4 h-4 mr-1" />
+                                                                {errors.enrollmentDate.message}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </TabsContent>
@@ -435,13 +423,6 @@ export default function AdminStudentCreate() {
                                                         <div className="flex space-x-2">
                                                             <Input
                                                                 id="studentId"
-                                                                value={formData.studentId}
-                                                                onChange={(e) =>
-                                                                    updateFormData(
-                                                                        'studentId',
-                                                                        e.target.value
-                                                                    )
-                                                                }
                                                                 placeholder="240001"
                                                                 disabled={isLoading}
                                                                 className={
@@ -449,6 +430,7 @@ export default function AdminStudentCreate() {
                                                                         ? 'border-red-500'
                                                                         : ''
                                                                 }
+                                                                {...register('studentId')}
                                                             />
                                                             <Button
                                                                 type="button"
@@ -463,7 +445,7 @@ export default function AdminStudentCreate() {
                                                         {errors.studentId && (
                                                             <p className="text-sm text-red-600 flex items-center">
                                                                 <AlertCircle className="w-4 h-4 mr-1" />
-                                                                {errors.studentId}
+                                                                {errors.studentId.message}
                                                             </p>
                                                         )}
                                                     </div>
@@ -483,14 +465,8 @@ export default function AdminStudentCreate() {
                                                                             ? 'text'
                                                                             : 'password'
                                                                     }
-                                                                    value={formData.password}
                                                                     disabled={isLoading}
-                                                                    onChange={(e) =>
-                                                                        updateFormData(
-                                                                            'password',
-                                                                            e.target.value
-                                                                        )
-                                                                    }
+                                                                    {...register('password')}
                                                                     placeholder="8文字以上"
                                                                     className={
                                                                         errors.password
@@ -532,7 +508,7 @@ export default function AdminStudentCreate() {
                                                         {errors.password && (
                                                             <p className="text-sm text-red-600 flex items-center">
                                                                 <AlertCircle className="w-4 h-4 mr-1" />
-                                                                {errors.password}
+                                                                {errors.password.message}
                                                             </p>
                                                         )}
                                                     </div>
@@ -550,20 +526,14 @@ export default function AdminStudentCreate() {
                                                                         ? 'text'
                                                                         : 'password'
                                                                 }
-                                                                value={formData.confirmPassword}
                                                                 disabled={isLoading}
-                                                                onChange={(e) =>
-                                                                    updateFormData(
-                                                                        'confirmPassword',
-                                                                        e.target.value
-                                                                    )
-                                                                }
                                                                 placeholder="パスワードを再入力"
                                                                 className={
                                                                     errors.confirmPassword
                                                                         ? 'border-red-500 pr-10'
                                                                         : 'pr-10'
                                                                 }
+                                                                {...register('confirmPassword')}
                                                             />
                                                             <Button
                                                                 type="button"
@@ -587,7 +557,7 @@ export default function AdminStudentCreate() {
                                                         {errors.confirmPassword && (
                                                             <p className="text-sm text-red-600 flex items-center">
                                                                 <AlertCircle className="w-4 h-4 mr-1" />
-                                                                {errors.confirmPassword}
+                                                                {errors.confirmPassword.message}
                                                             </p>
                                                         )}
                                                     </div>

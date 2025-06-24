@@ -7,17 +7,18 @@ import { supabase } from '@/lib/SupabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield, CheckCircle, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { adminForgetPasswordFormData, adminForgetPasswordValidation } from '@/lib/validation';
 import toast from 'react-hot-toast';
 
 export default function AdminPasswordResetConfirm() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -25,10 +26,19 @@ export default function AdminPasswordResetConfirm() {
     const [error, setError] = useState('');
     const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
 
-    // URLパラメータからトークンを取得
+    // URLパラメータまたはフラグメントからトークンを取得
     useEffect(() => {
-        const accessToken = searchParams.get('access_token');
-        const refreshToken = searchParams.get('refresh_token');
+        let accessToken = searchParams.get('access_token');
+        let refreshToken = searchParams.get('refresh_token');
+
+        // クエリパラメータにない場合、URLフラグメント（#以降）をチェック
+        if (!accessToken || !refreshToken) {
+            const hash = window.location.hash.substring(1); // #を除去
+            const hashParams = new URLSearchParams(hash);
+
+            accessToken = hashParams.get('access_token');
+            refreshToken = hashParams.get('refresh_token');
+        }
 
         if (!accessToken || !refreshToken) {
             // トークンがない場合はログイン画面にリダイレクト
@@ -45,23 +55,43 @@ export default function AdminPasswordResetConfirm() {
             });
 
             if (error) {
-                toast.error(`セッション設定エラー: ${error}`);
+                toast.error(`セッション設定エラー: ${error.message}`);
                 router.replace('/');
+            } else {
+                // セッション設定成功後、URLからフラグメントを削除（クリーンアップ）
+                if (window.location.hash) {
+                    window.history.replaceState(null, '', window.location.pathname);
+                }
             }
         };
 
         setSessionAsync();
     }, [searchParams, router]);
 
+    const {
+        register,
+        handleSubmit,
+        watch,
+        formState: { errors },
+    } = useForm<adminForgetPasswordFormData>({
+        resolver: zodResolver(adminForgetPasswordValidation),
+        mode: 'onChange',
+    });
+
+    const password = watch('password') || '';
+    const confirmPassword = watch('confirmPassword') || '';
+
     // パスワード強度チェック
-    const validatePassword = (password: string) => {
+    const validatePassword = (password: string, confirmPassword?: string) => {
         const errors: { [key: string]: string } = {};
 
-        if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+        if (password.length < 8) {
+            errors.password = 'パスワードは8文字以上である必要があります';
+        } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
             errors.password = 'パスワードは大文字、小文字、数字を含む必要があります';
         }
 
-        if (confirmPassword && password !== confirmPassword) {
+        if (confirmPassword && password && password !== confirmPassword) {
             errors.confirmPassword = 'パスワードが一致しません';
         }
 
@@ -71,16 +101,17 @@ export default function AdminPasswordResetConfirm() {
     // 入力時のリアルタイムバリデーション
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        setPassword(value);
         setError('');
 
-        const errors = validatePassword(value);
-        setValidationErrors((prev) => ({ ...prev, ...errors }));
+        const errors = validatePassword(value, confirmPassword);
+        setValidationErrors((prev) => ({
+            ...prev,
+            password: errors.password || '',
+        }));
     };
 
     const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        setConfirmPassword(value);
         setError('');
 
         if (password && value !== password) {
@@ -98,10 +129,8 @@ export default function AdminPasswordResetConfirm() {
     };
 
     // パスワード更新処理
-    const handlePasswordUpdate = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        const errors = validatePassword(password);
+    const handlePasswordUpdate: SubmitHandler<adminForgetPasswordFormData> = async (data) => {
+        const errors = validatePassword(data.password, data.confirmPassword);
         if (Object.keys(errors).length > 0) {
             setValidationErrors(errors);
             return;
@@ -112,7 +141,7 @@ export default function AdminPasswordResetConfirm() {
 
         try {
             const { error } = await supabase.auth.updateUser({
-                password: password,
+                password: data.password,
             });
 
             if (error) {
@@ -123,7 +152,7 @@ export default function AdminPasswordResetConfirm() {
 
             // 3秒後にログイン画面にリダイレクト
             setTimeout(() => {
-                router.push('/admin/login');
+                router.push('/');
             }, 3000);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
@@ -208,7 +237,7 @@ export default function AdminPasswordResetConfirm() {
                 </CardHeader>
 
                 <CardContent>
-                    <form onSubmit={handlePasswordUpdate} className="space-y-6">
+                    <form onSubmit={handleSubmit(handlePasswordUpdate)} className="space-y-6">
                         <div className="space-y-2">
                             <Label htmlFor="password" className="text-sm font-medium text-gray-700">
                                 新しいパスワード
@@ -217,11 +246,14 @@ export default function AdminPasswordResetConfirm() {
                                 <Input
                                     id="password"
                                     type={showPassword ? 'text' : 'password'}
-                                    value={password}
-                                    onChange={handlePasswordChange}
+                                    {...register('password')}
+                                    onChange={(e) => {
+                                        register('password').onChange(e);
+                                        handlePasswordChange(e);
+                                    }}
                                     placeholder="新しいパスワードを入力"
                                     className={`pr-10 transition-colors ${
-                                        validationErrors.password
+                                        validationErrors.password || errors.password
                                             ? 'border-red-300 focus:border-red-500'
                                             : 'border-gray-300 focus:border-blue-500'
                                     }`}
@@ -239,10 +271,10 @@ export default function AdminPasswordResetConfirm() {
                                     )}
                                 </button>
                             </div>
-                            {validationErrors.password && (
+                            {(validationErrors.password || errors.password) && (
                                 <p className="text-sm text-red-600 flex items-center gap-1">
                                     <AlertCircle className="w-4 h-4" />
-                                    {validationErrors.password}
+                                    {validationErrors.password || errors.password?.message}
                                 </p>
                             )}
                         </div>
@@ -258,11 +290,14 @@ export default function AdminPasswordResetConfirm() {
                                 <Input
                                     id="confirmPassword"
                                     type={showConfirmPassword ? 'text' : 'password'}
-                                    value={confirmPassword}
-                                    onChange={handleConfirmPasswordChange}
+                                    {...register('confirmPassword')}
+                                    onChange={(e) => {
+                                        register('confirmPassword').onChange(e);
+                                        handleConfirmPasswordChange(e);
+                                    }}
                                     placeholder="パスワードを再入力"
                                     className={`pr-10 transition-colors ${
-                                        validationErrors.confirmPassword
+                                        validationErrors.confirmPassword || errors.confirmPassword
                                             ? 'border-red-300 focus:border-red-500'
                                             : 'border-gray-300 focus:border-blue-500'
                                     }`}
@@ -280,10 +315,11 @@ export default function AdminPasswordResetConfirm() {
                                     )}
                                 </button>
                             </div>
-                            {validationErrors.confirmPassword && (
+                            {(validationErrors.confirmPassword || errors.confirmPassword) && (
                                 <p className="text-sm text-red-600 flex items-center gap-1">
                                     <AlertCircle className="w-4 h-4" />
-                                    {validationErrors.confirmPassword}
+                                    {validationErrors.confirmPassword ||
+                                        errors.confirmPassword?.message}
                                 </p>
                             )}
                         </div>
@@ -326,7 +362,8 @@ export default function AdminPasswordResetConfirm() {
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                             disabled={
                                 isLoading ||
-                                Object.keys(validationErrors).length > 0 ||
+                                Object.values(validationErrors).some((error) => error) ||
+                                Object.keys(errors).length > 0 ||
                                 !password ||
                                 !confirmPassword
                             }

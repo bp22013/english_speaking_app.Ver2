@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, LogOut, Shield, Camera, Save } from 'lucide-react';
+import { User, LogOut, Save } from 'lucide-react';
 import { StudentNavigation } from '../../components/StudentNavigationBar';
 import { PasswordChangeDialog } from '../../components/StudentPassChangeModal';
 import { PageTransition, FadeIn, SoftFadeIn } from '../../components/page-transition';
@@ -38,15 +38,6 @@ export default function SettingsPage() {
 
     const handleSave = () => {
         console.log('Settings saved');
-    };
-
-    const handlePasswordChange = async (currentPassword: string, newPassword: string) => {
-        // 実際のアプリではここでAPIリクエストを行う
-        // このデモでは単に遅延を追加
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-
-        // パスワード変更が成功したことをトーストで通知
-        toast.success('パスワードを変更しました');
     };
 
     return (

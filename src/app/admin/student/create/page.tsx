@@ -1,13 +1,14 @@
+/* 生徒を作成するページ */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import type React from 'react';
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -15,55 +16,29 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
 import { UserPlus, Eye, EyeOff, AlertCircle, ArrowLeft, Save, Camera, X } from 'lucide-react';
 import { AdminNavigation } from '../../../components/AdminNavigation';
 import { PageTransition, FadeIn, SoftFadeIn } from '../../../components/page-transition';
 import { motion } from 'framer-motion';
+import { avatarPlaceholder } from '../../../components/Icon/avatarPlaceholder';
+import toast from 'react-hot-toast';
 
 // フォームデータの型定義
 interface StudentFormData {
     // 基本情報
     firstName: string;
     lastName: string;
-    email: string;
-    phone: string;
-    birthDate: string;
-    gender: string;
 
     // 学校情報
     grade: string;
-    class: string;
     studentId: string;
     enrollmentDate: string;
 
     // アカウント情報
     password: string;
     confirmPassword: string;
-    sendWelcomeEmail: boolean;
-    requirePasswordChange: boolean;
-
-    // 保護者情報
-    parentName: string;
-    parentEmail: string;
-    parentPhone: string;
-    relationship: string;
-
-    // 学習設定
-    initialLevel: string;
-    targetLevel: string;
-    weeklyGoal: number;
-    preferredStudyTime: string;
 
     // その他
     notes: string;
@@ -79,34 +54,18 @@ export default function AdminStudentCreate() {
     const [formData, setFormData] = useState<StudentFormData>({
         firstName: '',
         lastName: '',
-        email: '',
-        phone: '',
-        birthDate: '',
-        gender: '',
         grade: '',
-        class: '',
         studentId: '',
         enrollmentDate: new Date().toISOString().split('T')[0],
         password: '',
         confirmPassword: '',
-        sendWelcomeEmail: true,
-        requirePasswordChange: true,
-        parentName: '',
-        parentEmail: '',
-        parentPhone: '',
-        relationship: '',
-        initialLevel: '',
-        targetLevel: '',
-        weeklyGoal: 50,
-        preferredStudyTime: '',
         notes: '',
     });
 
     const [errors, setErrors] = useState<ValidationErrors>({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [previewMode, setPreviewMode] = useState(false);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [currentTab, setCurrentTab] = useState('basic');
 
@@ -118,21 +77,6 @@ export default function AdminStudentCreate() {
         '高校1年生',
         '高校2年生',
         '高校3年生',
-    ];
-
-    const classOptions = ['A', 'B', 'C', 'D', 'E'];
-
-    const levelOptions = [
-        { value: 'beginner', label: '初級 (CEFR A1-A2)' },
-        { value: 'intermediate', label: '中級 (CEFR B1-B2)' },
-        { value: 'advanced', label: '上級 (CEFR C1-C2)' },
-    ];
-
-    const studyTimeOptions = [
-        { value: 'morning', label: '朝 (6:00-9:00)' },
-        { value: 'afternoon', label: '午後 (12:00-18:00)' },
-        { value: 'evening', label: '夜 (18:00-22:00)' },
-        { value: 'flexible', label: 'フレキシブル' },
     ];
 
     // フォームデータの更新
@@ -151,13 +95,7 @@ export default function AdminStudentCreate() {
         // 基本情報のバリデーション
         if (!formData.firstName.trim()) newErrors.firstName = '名前（名）は必須です';
         if (!formData.lastName.trim()) newErrors.lastName = '名前（姓）は必須です';
-        if (!formData.email.trim()) {
-            newErrors.email = 'メールアドレスは必須です';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            newErrors.email = '有効なメールアドレスを入力してください';
-        }
         if (!formData.grade) newErrors.grade = '学年は必須です';
-        if (!formData.class) newErrors.class = 'クラスは必須です';
         if (!formData.studentId.trim()) newErrors.studentId = '学籍番号は必須です';
 
         // パスワードのバリデーション
@@ -168,11 +106,6 @@ export default function AdminStudentCreate() {
         }
         if (formData.password !== formData.confirmPassword) {
             newErrors.confirmPassword = 'パスワードが一致しません';
-        }
-
-        // 保護者情報のバリデーション（任意だが、入力された場合はバリデーション）
-        if (formData.parentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.parentEmail)) {
-            newErrors.parentEmail = '有効なメールアドレスを入力してください';
         }
 
         setErrors(newErrors);
@@ -208,7 +141,7 @@ export default function AdminStudentCreate() {
             return;
         }
 
-        setIsSubmitting(true);
+        setIsLoading(true);
 
         try {
             // ここで実際のAPI呼び出しを行う
@@ -221,38 +154,23 @@ export default function AdminStudentCreate() {
             setFormData({
                 firstName: '',
                 lastName: '',
-                email: '',
-                phone: '',
-                birthDate: '',
-                gender: '',
                 grade: '',
-                class: '',
                 studentId: '',
                 enrollmentDate: new Date().toISOString().split('T')[0],
                 password: '',
                 confirmPassword: '',
-                sendWelcomeEmail: true,
-                requirePasswordChange: true,
-                parentName: '',
-                parentEmail: '',
-                parentPhone: '',
-                relationship: '',
-                initialLevel: '',
-                targetLevel: '',
-                weeklyGoal: 50,
-                preferredStudyTime: '',
                 notes: '',
             });
             setAvatarPreview(null);
             setCurrentTab('basic');
-        } catch (error) {
-            alert('エラーが発生しました。もう一度お試しください。');
+        } catch {
+            toast.error('エラーが発生しました。もう一度お試しください。');
         } finally {
-            setIsSubmitting(false);
+            setIsLoading(false);
         }
     };
 
-    // 自動生成機能
+    // 生徒IDを自動生成する関数
     const generateStudentId = () => {
         const year = new Date().getFullYear().toString().slice(-2);
         const random = Math.floor(Math.random() * 10000)
@@ -261,6 +179,7 @@ export default function AdminStudentCreate() {
         updateFormData('studentId', `${year}${random}`);
     };
 
+    // パスワードを自動生成する関数
     const generatePassword = () => {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         let password = '';
@@ -272,7 +191,7 @@ export default function AdminStudentCreate() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 space-y-6 overflow-y-scroll">
             <AdminNavigation currentPage="students" />
             <PageTransition>
                 <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -308,76 +227,6 @@ export default function AdminStudentCreate() {
                                         </motion.p>
                                     </div>
                                 </div>
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.4, duration: 0.6 }}
-                                    className="flex space-x-3"
-                                >
-                                    <Dialog open={previewMode} onOpenChange={setPreviewMode}>
-                                        <DialogTrigger asChild>
-                                            <Button variant="outline" className="cursor-pointer">
-                                                <Eye className="mr-2 h-4 w-4" />
-                                                プレビュー
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="max-w-2xl">
-                                            <DialogHeader>
-                                                <DialogTitle>生徒情報プレビュー</DialogTitle>
-                                                <DialogDescription>
-                                                    入力された情報の確認
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <div className="space-y-4">
-                                                <div className="flex items-center space-x-4">
-                                                    <Avatar className="w-16 h-16">
-                                                        <AvatarImage
-                                                            src={
-                                                                avatarPreview || '/placeholder.svg'
-                                                            }
-                                                        />
-                                                        <AvatarFallback className="bg-purple-100 text-purple-600 text-xl">
-                                                            {formData.firstName.charAt(0) || '?'}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <div>
-                                                        <h3 className="text-xl font-semibold">
-                                                            {formData.lastName} {formData.firstName}
-                                                        </h3>
-                                                        <p className="text-gray-600">
-                                                            {formData.grade} {formData.class}組
-                                                        </p>
-                                                        <p className="text-sm text-gray-500">
-                                                            学籍番号: {formData.studentId}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                                    <div>
-                                                        <span className="font-medium">メール:</span>{' '}
-                                                        {formData.email}
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-medium">電話:</span>{' '}
-                                                        {formData.phone || '未設定'}
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-medium">
-                                                            初期レベル:
-                                                        </span>{' '}
-                                                        {formData.initialLevel || '未設定'}
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-medium">
-                                                            週間目標:
-                                                        </span>{' '}
-                                                        {formData.weeklyGoal}単語
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </DialogContent>
-                                    </Dialog>
-                                </motion.div>
                             </div>
                         </FadeIn>
 
@@ -393,30 +242,32 @@ export default function AdminStudentCreate() {
                                     </CardHeader>
                                     <CardContent>
                                         <Tabs value={currentTab} onValueChange={setCurrentTab}>
-                                            <TabsList className="grid w-full grid-cols-4">
-                                                <TabsTrigger value="basic">基本情報</TabsTrigger>
-                                                <TabsTrigger value="account">
+                                            <TabsList className="grid w-full grid-cols-2">
+                                                <TabsTrigger
+                                                    value="basic"
+                                                    className="cursor-pointer"
+                                                >
+                                                    基本情報
+                                                </TabsTrigger>
+                                                <TabsTrigger
+                                                    value="account"
+                                                    className="cursor-pointer"
+                                                >
                                                     アカウント
                                                 </TabsTrigger>
-                                                <TabsTrigger value="parent">保護者情報</TabsTrigger>
-                                                <TabsTrigger value="settings">学習設定</TabsTrigger>
                                             </TabsList>
 
                                             {/* 基本情報タブ */}
                                             <TabsContent value="basic" className="space-y-6">
                                                 {/* アバター設定 */}
-                                                <div className="flex items-center space-x-6">
+                                                <div className="flex items-center space-x-6 mt-5">
                                                     <div className="relative">
                                                         <Avatar className="w-24 h-24">
                                                             <AvatarImage
-                                                                src={
-                                                                    avatarPreview ||
-                                                                    '/placeholder.svg'
-                                                                }
+                                                                src={avatarPreview || undefined}
                                                             />
-                                                            <AvatarFallback className="bg-purple-100 text-purple-600 text-2xl">
-                                                                {formData.firstName.charAt(0) ||
-                                                                    '?'}
+                                                            <AvatarFallback className="bg-white flex items-center justify-center p-1 border border-black">
+                                                                {avatarPlaceholder()}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <label className="absolute bottom-0 right-0 bg-purple-600 text-white rounded-full p-2 cursor-pointer hover:bg-purple-700 transition-colors">
@@ -441,6 +292,7 @@ export default function AdminStudentCreate() {
                                                                 type="button"
                                                                 variant="ghost"
                                                                 size="sm"
+                                                                disabled={isLoading}
                                                                 onClick={() => {
                                                                     setAvatarPreview(null);
                                                                     setFormData((prev) => ({
@@ -448,7 +300,7 @@ export default function AdminStudentCreate() {
                                                                         avatar: undefined,
                                                                     }));
                                                                 }}
-                                                                className="mt-2 text-red-600 hover:text-red-700"
+                                                                className="mt-2 text-red-600 hover:text-red-700 cursor-pointer"
                                                             >
                                                                 <X className="w-4 h-4 mr-1" />
                                                                 削除
@@ -464,6 +316,8 @@ export default function AdminStudentCreate() {
                                                         <Input
                                                             id="lastName"
                                                             value={formData.lastName}
+                                                            autoFocus
+                                                            disabled={isLoading}
                                                             onChange={(e) =>
                                                                 updateFormData(
                                                                     'lastName',
@@ -497,6 +351,7 @@ export default function AdminStudentCreate() {
                                                                 )
                                                             }
                                                             placeholder="太郎"
+                                                            disabled={isLoading}
                                                             className={
                                                                 errors.firstName
                                                                     ? 'border-red-500'
@@ -511,95 +366,6 @@ export default function AdminStudentCreate() {
                                                         )}
                                                     </div>
 
-                                                    {/* メールアドレス */}
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="email">
-                                                            メールアドレス *
-                                                        </Label>
-                                                        <Input
-                                                            id="email"
-                                                            type="email"
-                                                            value={formData.email}
-                                                            onChange={(e) =>
-                                                                updateFormData(
-                                                                    'email',
-                                                                    e.target.value
-                                                                )
-                                                            }
-                                                            placeholder="student@example.com"
-                                                            className={
-                                                                errors.email ? 'border-red-500' : ''
-                                                            }
-                                                        />
-                                                        {errors.email && (
-                                                            <p className="text-sm text-red-600 flex items-center">
-                                                                <AlertCircle className="w-4 h-4 mr-1" />
-                                                                {errors.email}
-                                                            </p>
-                                                        )}
-                                                    </div>
-
-                                                    {/* 電話番号 */}
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="phone">電話番号</Label>
-                                                        <Input
-                                                            id="phone"
-                                                            value={formData.phone}
-                                                            onChange={(e) =>
-                                                                updateFormData(
-                                                                    'phone',
-                                                                    e.target.value
-                                                                )
-                                                            }
-                                                            placeholder="090-1234-5678"
-                                                        />
-                                                    </div>
-
-                                                    {/* 生年月日 */}
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="birthDate">生年月日</Label>
-                                                        <Input
-                                                            id="birthDate"
-                                                            type="date"
-                                                            value={formData.birthDate}
-                                                            onChange={(e) =>
-                                                                updateFormData(
-                                                                    'birthDate',
-                                                                    e.target.value
-                                                                )
-                                                            }
-                                                        />
-                                                    </div>
-
-                                                    {/* 性別 */}
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="gender">性別</Label>
-                                                        <Select
-                                                            value={formData.gender}
-                                                            onValueChange={(value) =>
-                                                                updateFormData('gender', value)
-                                                            }
-                                                        >
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="選択してください" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="male">
-                                                                    男性
-                                                                </SelectItem>
-                                                                <SelectItem value="female">
-                                                                    女性
-                                                                </SelectItem>
-                                                                <SelectItem value="other">
-                                                                    その他
-                                                                </SelectItem>
-                                                                <SelectItem value="prefer-not-to-say">
-                                                                    回答しない
-                                                                </SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-
                                                     {/* 学年 */}
                                                     <div className="space-y-2">
                                                         <Label htmlFor="grade">学年 *</Label>
@@ -612,9 +378,10 @@ export default function AdminStudentCreate() {
                                                             <SelectTrigger
                                                                 className={
                                                                     errors.grade
-                                                                        ? 'border-red-500'
-                                                                        : ''
+                                                                        ? 'border-red-500 cursor-pointer'
+                                                                        : 'cursor-pointer'
                                                                 }
+                                                                disabled={isLoading}
                                                             >
                                                                 <SelectValue placeholder="学年を選択" />
                                                             </SelectTrigger>
@@ -623,6 +390,7 @@ export default function AdminStudentCreate() {
                                                                     <SelectItem
                                                                         key={grade}
                                                                         value={grade}
+                                                                        className="cursor-pointer"
                                                                     >
                                                                         {grade}
                                                                     </SelectItem>
@@ -637,89 +405,15 @@ export default function AdminStudentCreate() {
                                                         )}
                                                     </div>
 
-                                                    {/* クラス */}
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="class">クラス *</Label>
-                                                        <Select
-                                                            value={formData.class}
-                                                            onValueChange={(value) =>
-                                                                updateFormData('class', value)
-                                                            }
-                                                        >
-                                                            <SelectTrigger
-                                                                className={
-                                                                    errors.class
-                                                                        ? 'border-red-500'
-                                                                        : ''
-                                                                }
-                                                            >
-                                                                <SelectValue placeholder="クラスを選択" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {classOptions.map((cls) => (
-                                                                    <SelectItem
-                                                                        key={cls}
-                                                                        value={cls}
-                                                                    >
-                                                                        {cls}組
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        {errors.class && (
-                                                            <p className="text-sm text-red-600 flex items-center">
-                                                                <AlertCircle className="w-4 h-4 mr-1" />
-                                                                {errors.class}
-                                                            </p>
-                                                        )}
-                                                    </div>
-
-                                                    {/* 学籍番号 */}
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="studentId">
-                                                            学籍番号 *
-                                                        </Label>
-                                                        <div className="flex space-x-2">
-                                                            <Input
-                                                                id="studentId"
-                                                                value={formData.studentId}
-                                                                onChange={(e) =>
-                                                                    updateFormData(
-                                                                        'studentId',
-                                                                        e.target.value
-                                                                    )
-                                                                }
-                                                                placeholder="240001"
-                                                                className={
-                                                                    errors.studentId
-                                                                        ? 'border-red-500'
-                                                                        : ''
-                                                                }
-                                                            />
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                onClick={generateStudentId}
-                                                            >
-                                                                自動生成
-                                                            </Button>
-                                                        </div>
-                                                        {errors.studentId && (
-                                                            <p className="text-sm text-red-600 flex items-center">
-                                                                <AlertCircle className="w-4 h-4 mr-1" />
-                                                                {errors.studentId}
-                                                            </p>
-                                                        )}
-                                                    </div>
-
                                                     {/* 入学日 */}
                                                     <div className="space-y-2">
                                                         <Label htmlFor="enrollmentDate">
-                                                            入学日
+                                                            登録日
                                                         </Label>
                                                         <Input
                                                             id="enrollmentDate"
                                                             type="date"
+                                                            disabled={isLoading}
                                                             value={formData.enrollmentDate}
                                                             onChange={(e) =>
                                                                 updateFormData(
@@ -733,15 +427,55 @@ export default function AdminStudentCreate() {
                                             </TabsContent>
 
                                             {/* アカウント情報タブ */}
-                                            <TabsContent value="account" className="space-y-6">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <TabsContent value="account" className="space-y-6 mt-5">
+                                                <div className="grid gap-6">
+                                                    {/* 生徒ID */}
+                                                    <div className="space-y-2 w-full">
+                                                        <Label htmlFor="studentId">生徒ID *</Label>
+                                                        <div className="flex space-x-2">
+                                                            <Input
+                                                                id="studentId"
+                                                                value={formData.studentId}
+                                                                onChange={(e) =>
+                                                                    updateFormData(
+                                                                        'studentId',
+                                                                        e.target.value
+                                                                    )
+                                                                }
+                                                                placeholder="240001"
+                                                                disabled={isLoading}
+                                                                className={
+                                                                    errors.studentId
+                                                                        ? 'border-red-500'
+                                                                        : ''
+                                                                }
+                                                            />
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                onClick={generateStudentId}
+                                                                disabled={isLoading}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                生徒ID自動生成
+                                                            </Button>
+                                                        </div>
+                                                        {errors.studentId && (
+                                                            <p className="text-sm text-red-600 flex items-center">
+                                                                <AlertCircle className="w-4 h-4 mr-1" />
+                                                                {errors.studentId}
+                                                            </p>
+                                                        )}
+                                                    </div>
+
                                                     {/* パスワード */}
-                                                    <div className="space-y-2">
+                                                    <div className="w-full space-y-2">
                                                         <Label htmlFor="password">
                                                             パスワード *
                                                         </Label>
-                                                        <div className="flex space-x-2">
-                                                            <div className="relative flex-1">
+                                                        <div className="flex gap-2">
+                                                            {/* Input + 目のアイコン */}
+                                                            <div className="relative w-full">
                                                                 <Input
                                                                     id="password"
                                                                     type={
@@ -750,6 +484,7 @@ export default function AdminStudentCreate() {
                                                                             : 'password'
                                                                     }
                                                                     value={formData.password}
+                                                                    disabled={isLoading}
                                                                     onChange={(e) =>
                                                                         updateFormData(
                                                                             'password',
@@ -759,15 +494,16 @@ export default function AdminStudentCreate() {
                                                                     placeholder="8文字以上"
                                                                     className={
                                                                         errors.password
-                                                                            ? 'border-red-500'
-                                                                            : ''
+                                                                            ? 'border-red-500 pr-10'
+                                                                            : 'pr-10'
                                                                     }
                                                                 />
                                                                 <Button
                                                                     type="button"
                                                                     variant="ghost"
+                                                                    disabled={isLoading}
                                                                     size="icon"
-                                                                    className="absolute right-0 top-0 h-full"
+                                                                    className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
                                                                     onClick={() =>
                                                                         setShowPassword(
                                                                             !showPassword
@@ -781,12 +517,16 @@ export default function AdminStudentCreate() {
                                                                     )}
                                                                 </Button>
                                                             </div>
+
+                                                            {/* 自動生成ボタン */}
                                                             <Button
                                                                 type="button"
                                                                 variant="outline"
+                                                                disabled={isLoading}
                                                                 onClick={generatePassword}
+                                                                className="whitespace-nowrap cursor-pointer"
                                                             >
-                                                                自動生成
+                                                                パスワード自動生成
                                                             </Button>
                                                         </div>
                                                         {errors.password && (
@@ -811,6 +551,7 @@ export default function AdminStudentCreate() {
                                                                         : 'password'
                                                                 }
                                                                 value={formData.confirmPassword}
+                                                                disabled={isLoading}
                                                                 onChange={(e) =>
                                                                     updateFormData(
                                                                         'confirmPassword',
@@ -820,15 +561,16 @@ export default function AdminStudentCreate() {
                                                                 placeholder="パスワードを再入力"
                                                                 className={
                                                                     errors.confirmPassword
-                                                                        ? 'border-red-500'
-                                                                        : ''
+                                                                        ? 'border-red-500 pr-10'
+                                                                        : 'pr-10'
                                                                 }
                                                             />
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
+                                                                disabled={isLoading}
                                                                 size="icon"
-                                                                className="absolute right-0 top-0 h-full"
+                                                                className="absolute right-0 top-0 h-full cursor-pointer"
                                                                 onClick={() =>
                                                                     setShowConfirmPassword(
                                                                         !showConfirmPassword
@@ -850,291 +592,25 @@ export default function AdminStudentCreate() {
                                                         )}
                                                     </div>
                                                 </div>
-
-                                                {/* アカウント設定 */}
-                                                <div className="space-y-4">
-                                                    <h3 className="text-lg font-medium text-gray-900">
-                                                        アカウント設定
-                                                    </h3>
-
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="space-y-0.5">
-                                                            <Label>ウェルカムメール送信</Label>
-                                                            <p className="text-sm text-gray-500">
-                                                                アカウント作成時にログイン情報をメールで送信
-                                                            </p>
-                                                        </div>
-                                                        <Switch
-                                                            checked={formData.sendWelcomeEmail}
-                                                            onCheckedChange={(checked) =>
-                                                                updateFormData(
-                                                                    'sendWelcomeEmail',
-                                                                    checked
-                                                                )
-                                                            }
-                                                        />
-                                                    </div>
-
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="space-y-0.5">
-                                                            <Label>
-                                                                初回ログイン時パスワード変更を要求
-                                                            </Label>
-                                                            <p className="text-sm text-gray-500">
-                                                                セキュリティ向上のため推奨されます
-                                                            </p>
-                                                        </div>
-                                                        <Switch
-                                                            checked={formData.requirePasswordChange}
-                                                            onCheckedChange={(checked) =>
-                                                                updateFormData(
-                                                                    'requirePasswordChange',
-                                                                    checked
-                                                                )
-                                                            }
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </TabsContent>
-
-                                            {/* 保護者情報タブ */}
-                                            <TabsContent value="parent" className="space-y-6">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="parentName">
-                                                            保護者氏名
-                                                        </Label>
-                                                        <Input
-                                                            id="parentName"
-                                                            value={formData.parentName}
-                                                            onChange={(e) =>
-                                                                updateFormData(
-                                                                    'parentName',
-                                                                    e.target.value
-                                                                )
-                                                            }
-                                                            placeholder="田中花子"
-                                                        />
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="relationship">続柄</Label>
-                                                        <Select
-                                                            value={formData.relationship}
-                                                            onValueChange={(value) =>
-                                                                updateFormData(
-                                                                    'relationship',
-                                                                    value
-                                                                )
-                                                            }
-                                                        >
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="選択してください" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="mother">
-                                                                    母
-                                                                </SelectItem>
-                                                                <SelectItem value="father">
-                                                                    父
-                                                                </SelectItem>
-                                                                <SelectItem value="guardian">
-                                                                    保護者
-                                                                </SelectItem>
-                                                                <SelectItem value="other">
-                                                                    その他
-                                                                </SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="parentEmail">
-                                                            保護者メールアドレス
-                                                        </Label>
-                                                        <Input
-                                                            id="parentEmail"
-                                                            type="email"
-                                                            value={formData.parentEmail}
-                                                            onChange={(e) =>
-                                                                updateFormData(
-                                                                    'parentEmail',
-                                                                    e.target.value
-                                                                )
-                                                            }
-                                                            placeholder="parent@example.com"
-                                                            className={
-                                                                errors.parentEmail
-                                                                    ? 'border-red-500'
-                                                                    : ''
-                                                            }
-                                                        />
-                                                        {errors.parentEmail && (
-                                                            <p className="text-sm text-red-600 flex items-center">
-                                                                <AlertCircle className="w-4 h-4 mr-1" />
-                                                                {errors.parentEmail}
-                                                            </p>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="parentPhone">
-                                                            保護者電話番号
-                                                        </Label>
-                                                        <Input
-                                                            id="parentPhone"
-                                                            value={formData.parentPhone}
-                                                            onChange={(e) =>
-                                                                updateFormData(
-                                                                    'parentPhone',
-                                                                    e.target.value
-                                                                )
-                                                            }
-                                                            placeholder="090-1234-5678"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </TabsContent>
-
-                                            {/* 学習設定タブ */}
-                                            <TabsContent value="settings" className="space-y-6">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="initialLevel">
-                                                            初期レベル
-                                                        </Label>
-                                                        <Select
-                                                            value={formData.initialLevel}
-                                                            onValueChange={(value) =>
-                                                                updateFormData(
-                                                                    'initialLevel',
-                                                                    value
-                                                                )
-                                                            }
-                                                        >
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="レベルを選択" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {levelOptions.map((level) => (
-                                                                    <SelectItem
-                                                                        key={level.value}
-                                                                        value={level.value}
-                                                                    >
-                                                                        {level.label}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="targetLevel">
-                                                            目標レベル
-                                                        </Label>
-                                                        <Select
-                                                            value={formData.targetLevel}
-                                                            onValueChange={(value) =>
-                                                                updateFormData('targetLevel', value)
-                                                            }
-                                                        >
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="目標レベルを選択" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {levelOptions.map((level) => (
-                                                                    <SelectItem
-                                                                        key={level.value}
-                                                                        value={level.value}
-                                                                    >
-                                                                        {level.label}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="weeklyGoal">
-                                                            週間学習目標（単語数）
-                                                        </Label>
-                                                        <Input
-                                                            id="weeklyGoal"
-                                                            type="number"
-                                                            min="1"
-                                                            max="500"
-                                                            value={formData.weeklyGoal}
-                                                            onChange={(e) =>
-                                                                updateFormData(
-                                                                    'weeklyGoal',
-                                                                    Number.parseInt(
-                                                                        e.target.value
-                                                                    ) || 0
-                                                                )
-                                                            }
-                                                        />
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="preferredStudyTime">
-                                                            希望学習時間帯
-                                                        </Label>
-                                                        <Select
-                                                            value={formData.preferredStudyTime}
-                                                            onValueChange={(value) =>
-                                                                updateFormData(
-                                                                    'preferredStudyTime',
-                                                                    value
-                                                                )
-                                                            }
-                                                        >
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="時間帯を選択" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {studyTimeOptions.map((time) => (
-                                                                    <SelectItem
-                                                                        key={time.value}
-                                                                        value={time.value}
-                                                                    >
-                                                                        {time.label}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="notes">備考</Label>
-                                                    <Textarea
-                                                        id="notes"
-                                                        value={formData.notes}
-                                                        onChange={(e) =>
-                                                            updateFormData('notes', e.target.value)
-                                                        }
-                                                        placeholder="特記事項があれば入力してください"
-                                                        rows={4}
-                                                    />
-                                                </div>
                                             </TabsContent>
                                         </Tabs>
 
                                         {/* 送信ボタン */}
-                                        <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                                        <div className="flex justify-end space-x-4 mt-6 pt-6 border-t border-gray-200">
                                             <Button
                                                 type="button"
                                                 variant="outline"
                                                 onClick={() => window.history.back()}
+                                                className="cursor-pointer"
                                             >
                                                 キャンセル
                                             </Button>
                                             <Button
                                                 type="submit"
-                                                disabled={isSubmitting}
-                                                className="bg-purple-600 hover:bg-purple-700"
+                                                disabled={isLoading}
+                                                className="bg-purple-600 hover:bg-purple-700 cursor-pointer"
                                             >
-                                                {isSubmitting ? (
+                                                {isLoading ? (
                                                     <>
                                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                                                         作成中...

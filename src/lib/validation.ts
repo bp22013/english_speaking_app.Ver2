@@ -2,11 +2,37 @@
 
 import { z } from 'zod';
 
+// ログイン時の生徒のバリデーション
+export const studentLoginValidation = z.object({
+    studentId: z.string().nonempty('生徒IDは必須です'),
+    studentPassword: z
+        .string()
+        .nonempty('パスワードを入力してください')
+        .min(8, 'パスワードは8文字以上で入力してください'),
+});
+
+export type StudentLoginFormData = z.infer<typeof studentLoginValidation>;
+
+// ログイン時の管理者のバリデーション
+export const adminLoginValidation = z.object({
+    email: z
+        .string()
+        .nonempty('メールアドレスを入力してください')
+        .email('有効なメールアドレスを入力してください'),
+    adminPassword: z
+        .string()
+        .nonempty('パスワードを入力してください')
+        .min(8, 'パスワードは8文字以上で入力してください'),
+});
+
+export type AdminLoginFormData = z.infer<typeof adminLoginValidation>;
+
 // 管理者のパスワード再設定用のバリデーションスキーマ
 export const adminForgetPasswordValidation = z
     .object({
         password: z
             .string()
+            .nonempty('パスワードを入力してください')
             .min(8, '8文字以上必要です')
             .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, '大文字・小文字・数字を含めてください'),
         confirmPassword: z.string(),

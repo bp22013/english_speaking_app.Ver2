@@ -31,36 +31,18 @@ import { client } from '@/lib/HonoClient';
 
 // フォームデータの型定義
 interface StudentFormData {
-    // 基本情報
     firstName: string;
     lastName: string;
-
-    // 学校情報
     grade: string;
     studentId: string;
     enrollmentDate: string;
-
-    // アカウント情報
     password: string;
     confirmPassword: string;
-
-    // その他
     notes: string;
     avatar?: File;
 }
 
 export default function AdminStudentCreate() {
-    const [formData, setFormData] = useState<StudentFormData>({
-        firstName: '',
-        lastName: '',
-        grade: '',
-        studentId: '',
-        enrollmentDate: new Date().toISOString().split('T')[0],
-        password: '',
-        confirmPassword: '',
-        notes: '',
-    });
-
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -77,6 +59,7 @@ export default function AdminStudentCreate() {
         '高校3年生',
     ];
 
+    // zodバリデーション定義
     const {
         register,
         handleSubmit,
@@ -98,13 +81,32 @@ export default function AdminStudentCreate() {
         },
     });
 
+    // 生徒IDを自動生成する関数
+    const generateStudentId = () => {
+        const year = new Date().getFullYear().toString().slice(-2);
+        const random = Math.floor(Math.random() * 10000)
+            .toString()
+            .padStart(4, '0');
+        const id = `${year}${random}`;
+        setValue('studentId', id);
+    };
+
+    // パスワードを自動生成する関数
+    const generatePassword = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let password = '';
+        for (let i = 0; i < 12; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        setValue('password', password);
+        setValue('confirmPassword', password);
+    };
+
     // アバター画像の処理
     const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
             setValue('avatar', file);
-
-            setFormData((prev) => ({ ...prev, avatar: file }));
 
             // プレビュー用のURL作成
             const reader = new FileReader();
@@ -120,7 +122,7 @@ export default function AdminStudentCreate() {
         setIsLoading(true);
 
         try {
-            const res = await client.api.auth.studentRegister.$get({
+            const res = await client.api.auth.studentRegister.$post({
                 json: {},
             });
 
@@ -131,23 +133,6 @@ export default function AdminStudentCreate() {
             toast.error('エラーが発生しました。もう一度お試しください。');
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    // 生徒IDを自動生成する関数
-    const generateStudentId = () => {
-        const year = new Date().getFullYear().toString().slice(-2);
-        const random = Math.floor(Math.random() * 10000)
-            .toString()
-            .padStart(4, '0');
-    };
-
-    // パスワードを自動生成する関数
-    const generatePassword = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        let password = '';
-        for (let i = 0; i < 12; i++) {
-            password += chars.charAt(Math.floor(Math.random() * chars.length));
         }
     };
 
@@ -164,6 +149,7 @@ export default function AdminStudentCreate() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
+                                        disabled={isLoading}
                                         onClick={() => window.history.back()}
                                         className="cursor-pointer"
                                     >
@@ -207,12 +193,14 @@ export default function AdminStudentCreate() {
                                                 <TabsTrigger
                                                     value="basic"
                                                     className="cursor-pointer"
+                                                    disabled={isLoading}
                                                 >
                                                     基本情報
                                                 </TabsTrigger>
                                                 <TabsTrigger
                                                     value="account"
                                                     className="cursor-pointer"
+                                                    disabled={isLoading}
                                                 >
                                                     アカウント
                                                 </TabsTrigger>
@@ -271,10 +259,6 @@ export default function AdminStudentCreate() {
                                                                 disabled={isLoading}
                                                                 onClick={() => {
                                                                     setAvatarPreview(null);
-                                                                    setFormData((prev) => ({
-                                                                        ...prev,
-                                                                        avatar: undefined,
-                                                                    }));
                                                                 }}
                                                                 className="mt-2 text-red-600 hover:text-red-700 cursor-pointer"
                                                             >
@@ -291,7 +275,6 @@ export default function AdminStudentCreate() {
                                                         <Label htmlFor="lastName">姓 *</Label>
                                                         <Input
                                                             id="lastName"
-                                                            value={formData.lastName}
                                                             autoFocus
                                                             disabled={isLoading}
                                                             {...register('lastName')}
@@ -314,7 +297,7 @@ export default function AdminStudentCreate() {
                                                         <Label htmlFor="firstName">名 *</Label>
                                                         <Input
                                                             id="firstName"
-                                                            value={formData.firstName}
+                                                            {...register('firstName')}
                                                             placeholder="太郎"
                                                             disabled={isLoading}
                                                             className={
@@ -322,7 +305,6 @@ export default function AdminStudentCreate() {
                                                                     ? 'border-red-500'
                                                                     : ''
                                                             }
-                                                            {...register('firstName')}
                                                         />
                                                         {errors.firstName && (
                                                             <p className="text-sm text-red-600 flex items-center">
@@ -571,6 +553,7 @@ export default function AdminStudentCreate() {
                                                 type="button"
                                                 variant="outline"
                                                 onClick={() => window.history.back()}
+                                                disabled={isLoading}
                                                 className="cursor-pointer"
                                             >
                                                 キャンセル

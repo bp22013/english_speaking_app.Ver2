@@ -26,34 +26,51 @@ import Link from 'next/link';
 import { supabase } from '@/lib/SupabaseClient';
 import toast from 'react-hot-toast';
 import { client } from '@/lib/HonoClient';
+import {
+    studentLoginValidation,
+    StudentLoginFormData,
+    AdminLoginFormData,
+    adminLoginValidation,
+} from '@/lib/validation';
+import { SubmitHandler, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
-    const [studentId, setStudentId] = useState('');
-    const [studentPassword, setStudentPassword] = useState('');
-    const [email, setEmail] = useState('');
-    const [adminPassword, setAdminPassword] = useState('');
     const [activeTab, setActiveTab] = useState('student');
     const [showStudentPassword, setStudentShowPassword] = useState(false);
     const [showAdminPassword, setShowAdminPassword] = useState(false);
 
     const router = useRouter();
 
+    // 生徒用フォーム
+    const studentForm = useForm<StudentLoginFormData>({
+        resolver: zodResolver(studentLoginValidation),
+        mode: 'onChange',
+    });
+
+    // 管理者用フォーム
+    const adminForm = useForm<AdminLoginFormData>({
+        resolver: zodResolver(adminLoginValidation),
+        mode: 'onChange',
+    });
+
     // 管理者のログイン用関数（supabase）
-    const adminHandleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const adminHandleLogin: SubmitHandler<AdminLoginFormData> = async (data) => {
         setIsLoading(true);
 
         toast.promise(
             new Promise(async (resolve, reject) => {
                 try {
                     const { error } = await supabase.auth.signInWithPassword({
-                        email: email,
-                        password: adminPassword,
+                        email: data.email,
+                        password: data.adminPassword,
                     });
 
                     if (error) {
-                        reject(`ログイン中にエラーが発生しました: ${error}`);
+                        if (error.message == 'Invalid login credentials') {
+                            reject('メールアドレスまたはパスワードが違います');
+                        }
                     } else {
                         resolve('ログインしました!');
                         router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/dashboard`);
@@ -73,24 +90,23 @@ export default function LoginPage() {
     };
 
     // 生徒のログイン用関数（lucia）
-    const studentHandleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const studentHandleLogin: SubmitHandler<StudentLoginFormData> = async (data) => {
         setIsLoading(true);
 
         toast.promise(
             new Promise(async (resolve, reject) => {
                 try {
                     const res = await client.api.auth.studentLogin.$post({
-                        json: { studentId, password: studentPassword },
+                        json: { studentId: data.studentId, password: data.studentPassword },
                     });
 
-                    const data = await res.json();
+                    const responseData = await res.json();
 
-                    if (data.flg) {
-                        resolve(data.message);
+                    if (responseData.flg) {
+                        resolve(responseData.message);
                         router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/student/dashboard`);
                     } else {
-                        reject(data.error);
+                        reject(responseData.error);
                     }
                 } catch (error) {
                     reject(`不明なエラーが発生しました: ${error}`);
@@ -156,7 +172,10 @@ export default function LoginPage() {
                                     <h3 className="font-semibold text-gray-900">生徒ログイン</h3>
                                 </div>
 
-                                <form onSubmit={studentHandleLogin} className="space-y-5">
+                                <form
+                                    onSubmit={studentForm.handleSubmit(studentHandleLogin)}
+                                    className="space-y-5"
+                                >
                                     <div className="space-y-2">
                                         <Label
                                             htmlFor="student-studentId"
@@ -172,12 +191,19 @@ export default function LoginPage() {
                                                 disabled={isLoading}
                                                 type="text"
                                                 placeholder="生徒IDを入力"
-                                                value={studentId}
-                                                onChange={(e) => setStudentId(e.target.value)}
-                                                required
-                                                className="pl-10 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                                                className={`pl-10 h-12 border-2 focus:border-blue-500 focus:ring-blue-500 rounded-xl ${
+                                                    studentForm.formState.errors.studentId
+                                                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                                                        : 'border-gray-200'
+                                                }`}
+                                                {...studentForm.register('studentId')}
                                             />
                                         </div>
+                                        {studentForm.formState.errors.studentId && (
+                                            <p className="text-sm text-red-600 mt-1">
+                                                {studentForm.formState.errors.studentId.message}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">
@@ -202,10 +228,12 @@ export default function LoginPage() {
                                                 type={showStudentPassword ? 'text' : 'password'}
                                                 disabled={isLoading}
                                                 placeholder="パスワードを入力"
-                                                value={studentPassword}
-                                                onChange={(e) => setStudentPassword(e.target.value)}
-                                                required
-                                                className="pl-10 pr-10 h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                                                className={`pl-10 pr-10 h-12 border-2 focus:border-blue-500 focus:ring-blue-500 rounded-xl ${
+                                                    studentForm.formState.errors.studentPassword
+                                                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                                                        : 'border-gray-200'
+                                                }`}
+                                                {...studentForm.register('studentPassword')}
                                             />
                                             <Button
                                                 type="button"
@@ -224,6 +252,14 @@ export default function LoginPage() {
                                                 )}
                                             </Button>
                                         </div>
+                                        {studentForm.formState.errors.studentPassword && (
+                                            <p className="text-sm text-red-600 mt-1">
+                                                {
+                                                    studentForm.formState.errors.studentPassword
+                                                        .message
+                                                }
+                                            </p>
+                                        )}
                                     </div>
 
                                     <Button
@@ -246,7 +282,10 @@ export default function LoginPage() {
                                     <h3 className="font-semibold text-gray-900">管理者ログイン</h3>
                                 </div>
 
-                                <form onSubmit={adminHandleLogin} className="space-y-5">
+                                <form
+                                    onSubmit={adminForm.handleSubmit(adminHandleLogin)}
+                                    className="space-y-5"
+                                >
                                     <div className="space-y-2">
                                         <Label
                                             htmlFor="admin-email"
@@ -261,12 +300,19 @@ export default function LoginPage() {
                                                 type="email"
                                                 disabled={isLoading}
                                                 placeholder="admin@example.com"
-                                                value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
-                                                required
-                                                className="pl-10 h-12 border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl"
+                                                className={`pl-10 h-12 border-2 focus:border-purple-500 focus:ring-purple-500 rounded-xl ${
+                                                    adminForm.formState.errors.email
+                                                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                                                        : 'border-gray-200'
+                                                }`}
+                                                {...adminForm.register('email')}
                                             />
                                         </div>
+                                        {adminForm.formState.errors.email && (
+                                            <p className="text-sm text-red-600 mt-1">
+                                                {adminForm.formState.errors.email.message}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">
@@ -292,10 +338,12 @@ export default function LoginPage() {
                                                 type={showAdminPassword ? 'text' : 'password'}
                                                 disabled={isLoading}
                                                 placeholder="管理者パスワードを入力"
-                                                value={adminPassword}
-                                                onChange={(e) => setAdminPassword(e.target.value)}
-                                                required
-                                                className="pl-10 pr-10 h-12 border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl"
+                                                className={`pl-10 pr-10 h-12 border-2 focus:border-purple-500 focus:ring-purple-500 rounded-xl ${
+                                                    adminForm.formState.errors.adminPassword
+                                                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                                                        : 'border-gray-200'
+                                                }`}
+                                                {...adminForm.register('adminPassword')}
                                             />
                                             <Button
                                                 type="button"
@@ -314,6 +362,11 @@ export default function LoginPage() {
                                                 )}
                                             </Button>
                                         </div>
+                                        {adminForm.formState.errors.adminPassword && (
+                                            <p className="text-sm text-red-600 mt-1">
+                                                {adminForm.formState.errors.adminPassword.message}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <Button

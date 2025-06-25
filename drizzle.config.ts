@@ -1,3 +1,5 @@
+/* drizzleの設定ファイル */
+
 import { config } from 'dotenv';
 import * as dotenv from 'dotenv';
 import { defineConfig } from 'drizzle-kit';
@@ -12,4 +14,5 @@ export default defineConfig({
     dbCredentials: {
         url: process.env.DATABASE_URL!,
     },
+    schemaFilter: ['public'],
 });

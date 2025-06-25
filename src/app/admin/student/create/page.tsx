@@ -27,6 +27,7 @@ import { PageTransition, FadeIn, SoftFadeIn } from '../../../components/page-tra
 import { motion } from 'framer-motion';
 import { avatarPlaceholder } from '../../../components/Icon/avatarPlaceholder';
 import toast from 'react-hot-toast';
+import dayjs from 'dayjs';
 import { client } from '@/lib/HonoClient';
 
 // フォームデータの型定義
@@ -73,7 +74,7 @@ export default function AdminStudentCreate() {
             lastName: '',
             grade: '',
             studentId: '',
-            enrollmentDate: new Date().toISOString().split('T')[0],
+            enrollmentDate: dayjs().format('YYYY-MM-DD'),
             password: '',
             confirmPassword: '',
             notes: '',
@@ -121,19 +122,41 @@ export default function AdminStudentCreate() {
     const onSubmit: SubmitHandler<adminStudentRegisterFormData> = async (data) => {
         setIsLoading(true);
 
-        try {
-            const res = await client.api.auth.studentRegister.$post({
-                json: {},
-            });
+        toast.promise(
+            new Promise(async (resolve, reject) => {
+                const name = data.lastName + data.firstName;
+                try {
+                    const res = await client.api.auth.studentRegister.$post({
+                        json: {
+                            studentId: data.studentId,
+                            password: data.password,
+                            grade: data.grade,
+                            now: data.enrollmentDate,
+                            name: name,
+                        },
+                    });
 
-            const data = await res.json();
-            setAvatarPreview(null);
-            setCurrentTab('basic');
-        } catch {
-            toast.error('エラーが発生しました。もう一度お試しください。');
-        } finally {
-            setIsLoading(false);
-        }
+                    const responceData = await res.json();
+
+                    if (responceData.flg) {
+                        resolve(responceData.message);
+                    } else {
+                        reject(responceData.error);
+                    }
+                    setAvatarPreview(null);
+                    setCurrentTab('basic');
+                } catch (error) {
+                    reject(`不明なエラーが発生しました: ${error}`);
+                } finally {
+                    setIsLoading(false);
+                }
+            }),
+            {
+                loading: '登録しています...',
+                success: '登録しました!',
+                error: (message: string) => message,
+            }
+        );
     };
 
     return (

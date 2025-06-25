@@ -2,7 +2,7 @@
 
 import { Hono } from 'hono';
 import { db } from '@/server/db';
-import { users } from '@/server/db/schema';
+import { users, students } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { lucia } from '@/lib/auth/lucia';
 import { setCookie } from 'hono/cookie';
@@ -26,6 +26,8 @@ const studentLogin = new Hono().post('/studentLogin', async (c) => {
         const sessionCookie = lucia.createSessionCookie(session.id);
 
         setCookie(c, sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+
+        await db.update(students).set({ lastLoginAt: new Date() }).where(eq(students.id, user.id));
 
         return c.json({ message: 'ログインしました!', flg: true });
     } catch (error) {

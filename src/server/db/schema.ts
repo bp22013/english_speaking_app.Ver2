@@ -1,3 +1,5 @@
+/* データベースのスキーマ */
+
 import { pgTable, text, integer, real, timestamp, boolean } from 'drizzle-orm/pg-core';
 
 // 学生テーブル
@@ -8,7 +10,7 @@ export const students = pgTable('students', {
     studentId: text('student_id').unique().notNull(),
     name: text('name').notNull(),
     passwordHash: text('password_hash').notNull(),
-    grade: integer('grade'),
+    grade: text('grade'),
     registeredAt: timestamp('registered_at', { withTimezone: true }),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
 });

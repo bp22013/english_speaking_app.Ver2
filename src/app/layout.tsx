@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google';
 import { NextFont } from 'next/dist/compiled/@next/font';
 import React, { ReactNode, Suspense } from 'react';
 import { ToasterContext } from './context/ToastContext';
-import { SessionProvider } from 'next-auth/react';
+import Loading from './loading';
 import './styles/globals.css';
 
 const inter: NextFont = Inter({ subsets: ['latin'] });
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
     return (
         <html lang="en">
-            <Suspense>
+            <Suspense fallback={<Loading />}>
                 <body className={inter.className}>
                     <ToasterContext />
                     <div>{children}</div>

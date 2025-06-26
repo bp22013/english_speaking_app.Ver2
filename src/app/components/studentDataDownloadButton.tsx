@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -11,19 +10,31 @@ import {
     DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 
-export const StudentDataDownload = () => {
+// Student 型定義
+export interface Student {
+    studentId: string;
+    name: string;
+    grade: string | null;
+    lastLoginAt: string | null;
+    registeredAt: string | null;
+    isActive: boolean;
+}
+
+// Props の型を明示
+interface StudentDataDownloadProps {
+    data: Student[];
+}
+
+export const StudentDataDownload = ({ data }: StudentDataDownloadProps) => {
     const handleDownload = (selectedFormat: 'csv' | 'xlsx') => {
-        const data = [
-            { name: '田中太郎', email: 'tanaka@example.com', grade: '高校2年' },
-            { name: '佐藤花子', email: 'sato@example.com', grade: '高校1年' },
-        ];
+        if (data.length === 0) return;
 
         if (selectedFormat === 'csv') {
             const headers = Object.keys(data[0]);
             const csv = [
                 headers.join(','),
                 ...data.map((row) =>
-                    headers.map((field) => `"${row[field as keyof typeof row]}"`).join(',')
+                    headers.map((field) => `"${(row as any)[field] ?? ''}"`).join(',')
                 ),
             ].join('\n');
 

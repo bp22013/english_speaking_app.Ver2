@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +41,6 @@ import {
     Award,
     Eye,
     UserPlus,
-    Download,
     Upload,
     ArrowUpDown,
 } from 'lucide-react';
@@ -53,120 +52,31 @@ import {
     StaggerContainer,
 } from '../../components/page-transition';
 import { StudentDataDownload } from '@/app/components/studentDataDownloadButton';
+import Loading from '@/app/loading';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { client } from '@/lib/HonoClient';
+import toast from 'react-hot-toast';
+import dayjs from 'dayjs';
 
 // 生徒データの型定義
 interface Student {
-    id: number;
+    studentId: string;
     name: string;
-    email: string;
-    phone?: string;
-    grade: string;
-    class: string;
-    registeredAt: string;
-    lastActive: string;
-    status: 'active' | 'inactive' | 'suspended';
-    progress: {
-        totalWords: number;
-        correctRate: number;
-        studyTime: number;
-        streak: number;
-    };
-    avatar?: string;
+    grade: string | null;
+    lastLoginAt: string | null;
+    registeredAt: string | null;
+    isActive: boolean;
 }
 
-// サンプル生徒データ
-const sampleStudents: Student[] = [
-    {
-        id: 1,
-        name: '田中太郎',
-        email: 'tanaka@example.com',
-        phone: '090-1234-5678',
-        grade: '高校2年生',
-        class: '2-A',
-        registeredAt: '2024年1月10日',
-        lastActive: '10分前',
-        status: 'active',
-        progress: {
-            totalWords: 1247,
-            correctRate: 87,
-            studyTime: 145,
-            streak: 7,
-        },
-    },
-    {
-        id: 2,
-        name: '佐藤花子',
-        email: 'sato@example.com',
-        grade: '高校1年生',
-        class: '1-B',
-        registeredAt: '2024年1月8日',
-        lastActive: '2時間前',
-        status: 'active',
-        progress: {
-            totalWords: 892,
-            correctRate: 92,
-            studyTime: 98,
-            streak: 12,
-        },
-    },
-    {
-        id: 3,
-        name: '鈴木一郎',
-        email: 'suzuki@example.com',
-        grade: '中学3年生',
-        class: '3-C',
-        registeredAt: '2024年1月5日',
-        lastActive: '昨日',
-        status: 'active',
-        progress: {
-            totalWords: 567,
-            correctRate: 45,
-            studyTime: 67,
-            streak: 2,
-        },
-    },
-    {
-        id: 4,
-        name: '山田美咲',
-        email: 'yamada@example.com',
-        grade: '高校3年生',
-        class: '3-A',
-        registeredAt: '2024年1月3日',
-        lastActive: '3時間前',
-        status: 'active',
-        progress: {
-            totalWords: 1856,
-            correctRate: 88,
-            studyTime: 234,
-            streak: 15,
-        },
-    },
-    {
-        id: 5,
-        name: '伊藤健太',
-        email: 'ito@example.com',
-        grade: '中学2年生',
-        class: '2-B',
-        registeredAt: '2024年1月1日',
-        lastActive: '1週間前',
-        status: 'inactive',
-        progress: {
-            totalWords: 234,
-            correctRate: 67,
-            studyTime: 45,
-            streak: 0,
-        },
-    },
-];
+const grades = ['中学1年生', '中学2年生', '中学3年生', '高校1年生', '高校2年生', '高校3年生'];
 
 export default function AdminStudents() {
-    const [students, setStudents] = useState<Student[]>(sampleStudents);
+    const [students, setStudents] = useState<Student[]>([]);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedGrade, setSelectedGrade] = useState<string>('all');
     const [selectedStatus, setSelectedStatus] = useState<string>('all');
-    const [selectedClass, setSelectedClass] = useState<string>('all');
     const [sortField, setSortField] = useState<string>('name');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -174,35 +84,59 @@ export default function AdminStudents() {
 
     const router = useRouter();
 
-    // 学年とクラスの一覧を取得
-    const grades = Array.from(new Set(students.map((student) => student.grade)));
-    const classes = Array.from(new Set(students.map((student) => student.class)));
+    // 生徒情報を取得
+    useEffect(() => {
+        const fetchStudents = async () => {
+            try {
+                setIsLoading(true);
+                const res = await client.api.auth.getStudentInfo.$get();
+
+                if (res.ok) {
+                    const data = await res.json();
+                    setStudents(data.sessions);
+                } else {
+                }
+            } catch (error) {
+                toast.error('生徒情報を取得できませんでした');
+                router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/dashboard`);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchStudents();
+    }, []);
 
     // フィルタリングと並び替え
     const filteredStudents = students
         .filter((student) => {
             const matchesSearch =
                 student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                student.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                student.class.toLowerCase().includes(searchQuery.toLowerCase());
+                student.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (student.grade ?? '').toLowerCase().includes(searchQuery.toLowerCase());
             const matchesGrade = selectedGrade === 'all' || student.grade === selectedGrade;
-            const matchesStatus = selectedStatus === 'all' || student.status === selectedStatus;
-            const matchesClass = selectedClass === 'all' || student.class === selectedClass;
-            return matchesSearch && matchesGrade && matchesStatus && matchesClass;
+            const matchesStatus =
+                selectedStatus === 'all' ||
+                (selectedStatus === 'active' && student.isActive) ||
+                (selectedStatus === 'inactive' && !student.isActive);
+
+            return matchesSearch && matchesGrade && matchesStatus;
         })
         .sort((a, b) => {
             if (sortField === 'name') {
                 return sortDirection === 'asc'
                     ? a.name.localeCompare(b.name)
                     : b.name.localeCompare(a.name);
-            } else if (sortField === 'progress') {
-                return sortDirection === 'asc'
-                    ? a.progress.totalWords - b.progress.totalWords
-                    : b.progress.totalWords - a.progress.totalWords;
-            } else if (sortField === 'lastActive') {
-                return sortDirection === 'asc'
-                    ? new Date(a.lastActive).getTime() - new Date(b.lastActive).getTime()
-                    : new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime();
+            }
+            // if (sortField === 'progress') {
+            //     return sortDirection === 'asc'
+            //         ? a.progress.totalWords - b.progress.totalWords
+            //         : b.progress.totalWords - a.progress.totalWords;
+            // }
+            else if (sortField === 'lastActive') {
+                const aTime = a.lastLoginAt ? new Date(a.lastLoginAt).getTime() : 0;
+                const bTime = b.lastLoginAt ? new Date(b.lastLoginAt).getTime() : 0;
+                return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
             }
             return 0;
         });
@@ -221,45 +155,39 @@ export default function AdminStudents() {
         setIsDetailOpen(true);
     };
 
-    const handleDeleteStudent = (studentId: number) => {
-        setStudents(students.filter((student) => student.id !== studentId));
+    const handleDeleteStudent = (studentId: string) => {
+        //setStudents(students.filter((student) => student.studentId !== studentId));
     };
 
-    const handleStatusChange = (
-        studentId: number,
-        newStatus: 'active' | 'inactive' | 'suspended'
-    ) => {
+    const getStatusConfig = (status: boolean): { label: string; color: string } => {
+        return status
+            ? {
+                  label: 'アクティブ',
+                  color: 'bg-green-100 text-green-700 border-green-200',
+              }
+            : {
+                  label: '非アクティブ',
+                  color: 'bg-gray-100 text-gray-700 border-gray-200',
+              };
+    };
+
+    /*const handleStatusChange = (studentId: string, newStatus: 'active' | 'inactive') => {
         setStudents(
             students.map((student) =>
-                student.id === studentId ? { ...student, status: newStatus } : student
+                student.studentId === studentId ? { ...student, status: newStatus } : student
             )
         );
-    };
-
-    const getStatusConfig = (status: string) => {
-        switch (status) {
-            case 'active':
-                return {
-                    label: 'アクティブ',
-                    color: 'bg-green-100 text-green-700 border-green-200',
-                };
-            case 'inactive':
-                return {
-                    label: '非アクティブ',
-                    color: 'bg-gray-100 text-gray-700 border-gray-200',
-                };
-            case 'suspended':
-                return { label: '停止中', color: 'bg-red-100 text-red-700 border-red-200' };
-            default:
-                return { label: status, color: 'bg-gray-100 text-gray-700 border-gray-200' };
-        }
     };
 
     const getProgressColor = (rate: number) => {
         if (rate >= 80) return 'text-green-600';
         if (rate >= 60) return 'text-yellow-600';
         return 'text-red-600';
-    };
+    }; */
+
+    if (isLoading) {
+        return <Loading />;
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -294,7 +222,7 @@ export default function AdminStudents() {
                                     transition={{ delay: 0.4, duration: 0.6 }}
                                     className="mt-4 md:mt-0 flex space-x-3"
                                 >
-                                    <StudentDataDownload />
+                                    <StudentDataDownload data={students} />
                                     <Button variant="outline" className="cursor-pointer">
                                         <Upload className="mr-2 h-4 w-4" />
                                         インポート
@@ -323,7 +251,7 @@ export default function AdminStudents() {
                                     {
                                         title: 'アクティブ',
                                         value: students
-                                            .filter((s) => s.status === 'active')
+                                            .filter((s) => s.isActive === true)
                                             .length.toString(),
                                         icon: Target,
                                         color: 'green',
@@ -331,10 +259,13 @@ export default function AdminStudents() {
                                     {
                                         title: '平均学習単語数',
                                         value: Math.round(
+                                            /*
                                             students.reduce(
                                                 (sum, s) => sum + s.progress.totalWords,
                                                 0
                                             ) / students.length
+                                             */
+                                            0
                                         ).toString(),
                                         icon: BookOpen,
                                         color: 'purple',
@@ -342,10 +273,13 @@ export default function AdminStudents() {
                                     {
                                         title: '平均正答率',
                                         value: `${Math.round(
+                                            /*
                                             students.reduce(
                                                 (sum, s) => sum + s.progress.correctRate,
                                                 0
                                             ) / students.length
+                                             */
+                                            0
                                         )}%`,
                                         icon: TrendingUp,
                                         color: 'yellow',
@@ -435,39 +369,6 @@ export default function AdminStudents() {
                                             </Select>
 
                                             <Select
-                                                value={selectedClass}
-                                                onValueChange={setSelectedClass}
-                                            >
-                                                <SelectTrigger className="w-[150px] cursor-pointer">
-                                                    <div className="flex items-center">
-                                                        <Filter className="w-4 h-4 mr-2" />
-                                                        <span>
-                                                            {selectedClass === 'all'
-                                                                ? '全てのクラス'
-                                                                : selectedClass}
-                                                        </span>
-                                                    </div>
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem
-                                                        value="all"
-                                                        className="cursor-pointer"
-                                                    >
-                                                        全てのクラス
-                                                    </SelectItem>
-                                                    {classes.map((cls) => (
-                                                        <SelectItem
-                                                            key={cls}
-                                                            value={cls}
-                                                            className="cursor-pointer"
-                                                        >
-                                                            {cls}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-
-                                            <Select
                                                 value={selectedStatus}
                                                 onValueChange={setSelectedStatus}
                                             >
@@ -477,8 +378,9 @@ export default function AdminStudents() {
                                                         <span>
                                                             {selectedStatus === 'all'
                                                                 ? '全てのステータス'
-                                                                : getStatusConfig(selectedStatus)
-                                                                      .label}
+                                                                : selectedStatus === 'active'
+                                                                ? 'アクティブ'
+                                                                : '非アクティブ'}
                                                         </span>
                                                     </div>
                                                 </SelectTrigger>
@@ -500,12 +402,6 @@ export default function AdminStudents() {
                                                         className="cursor-pointer"
                                                     >
                                                         非アクティブ
-                                                    </SelectItem>
-                                                    <SelectItem
-                                                        value="suspended"
-                                                        className="cursor-pointer"
-                                                    >
-                                                        停止中
                                                     </SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -544,7 +440,7 @@ export default function AdminStudents() {
                                                         </div>
                                                     </th>
                                                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                                                        学年・クラス
+                                                        学年
                                                     </th>
                                                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
                                                         ステータス
@@ -576,11 +472,11 @@ export default function AdminStudents() {
                                                 <AnimatePresence>
                                                     {filteredStudents.map((student) => {
                                                         const statusConfig = getStatusConfig(
-                                                            student.status
+                                                            student.isActive
                                                         );
                                                         return (
                                                             <motion.tr
-                                                                key={student.id}
+                                                                key={student.studentId}
                                                                 initial={{ opacity: 0 }}
                                                                 animate={{ opacity: 1 }}
                                                                 exit={{ opacity: 0 }}
@@ -594,7 +490,6 @@ export default function AdminStudents() {
                                                                         <Avatar className="w-10 h-10">
                                                                             <AvatarImage
                                                                                 src={
-                                                                                    student.avatar ||
                                                                                     '/placeholder.svg'
                                                                                 }
                                                                                 alt={student.name}
@@ -610,7 +505,7 @@ export default function AdminStudents() {
                                                                                 {student.name}
                                                                             </p>
                                                                             <p className="text-sm text-gray-500">
-                                                                                {student.email}
+                                                                                {student.studentId}
                                                                             </p>
                                                                         </div>
                                                                     </div>
@@ -619,9 +514,6 @@ export default function AdminStudents() {
                                                                     <div>
                                                                         <p className="font-medium text-gray-900">
                                                                             {student.grade}
-                                                                        </p>
-                                                                        <p className="text-sm text-gray-500">
-                                                                            {student.class}
                                                                         </p>
                                                                     </div>
                                                                 </td>
@@ -638,11 +530,12 @@ export default function AdminStudents() {
                                                                 <td className="px-4 py-4">
                                                                     <div className="space-y-1">
                                                                         <div className="flex items-center justify-between text-sm">
+                                                                            {/*
                                                                             <span>
                                                                                 単語数:{' '}
                                                                                 {
-                                                                                    student.progress
-                                                                                        .totalWords
+                                                                                    //student.progress
+                                                                                    //    .totalWords
                                                                                 }
                                                                             </span>
                                                                             <span
@@ -657,23 +550,35 @@ export default function AdminStudents() {
                                                                                 }
                                                                                 %
                                                                             </span>
+                                                                             */}
                                                                         </div>
+                                                                        {/*
                                                                         <Progress
                                                                             value={
                                                                                 student.progress
-                                                                                    .correctRate
+                                                                                   .correctRate
                                                                             }
                                                                             className="h-2"
                                                                         />
+                                                                        */}
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-4 py-4 text-gray-500 text-sm">
-                                                                    {student.lastActive}
+                                                                <td>
+                                                                    <span>
+                                                                        {student.lastLoginAt
+                                                                            ? dayjs(
+                                                                                  student.lastLoginAt
+                                                                              ).format(
+                                                                                  'YYYY/MM/DD HH:mm'
+                                                                              )
+                                                                            : '不明'}
+                                                                    </span>
                                                                 </td>
                                                                 <td className="px-4 py-4 text-right">
                                                                     <DropdownMenu>
                                                                         <DropdownMenuTrigger
                                                                             asChild
+                                                                            className="cursor-pointer"
                                                                         >
                                                                             <Button
                                                                                 variant="ghost"
@@ -696,39 +601,29 @@ export default function AdminStudents() {
                                                                                         student
                                                                                     )
                                                                                 }
+                                                                                className="cursor-pointer"
                                                                             >
                                                                                 <Eye className="mr-2 h-4 w-4" />
                                                                                 詳細を見る
                                                                             </DropdownMenuItem>
-                                                                            <DropdownMenuItem>
+                                                                            <DropdownMenuItem className="cursor-pointer">
                                                                                 <Edit className="mr-2 h-4 w-4" />
                                                                                 編集
                                                                             </DropdownMenuItem>
-                                                                            <DropdownMenuItem>
+                                                                            <DropdownMenuItem className="cursor-pointer">
                                                                                 <Mail className="mr-2 h-4 w-4" />
                                                                                 メッセージ送信
                                                                             </DropdownMenuItem>
                                                                             <DropdownMenuSeparator />
                                                                             <DropdownMenuItem
                                                                                 onClick={() =>
-                                                                                    handleStatusChange(
-                                                                                        student.id,
-                                                                                        'suspended'
-                                                                                    )
-                                                                                }
-                                                                                className="text-yellow-600"
-                                                                            >
-                                                                                アカウント停止
-                                                                            </DropdownMenuItem>
-                                                                            <DropdownMenuItem
-                                                                                onClick={() =>
                                                                                     handleDeleteStudent(
-                                                                                        student.id
+                                                                                        student.studentId
                                                                                     )
                                                                                 }
-                                                                                className="text-red-600"
+                                                                                className="text-red-600 hover:!bg-red-100 focus:!text-red-600 cursor-pointer focus:!bg-red-100"
                                                                             >
-                                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                                <Trash2 className="mr-2 h-4 w-4 focus:!text-red-600" />
                                                                                 削除
                                                                             </DropdownMenuItem>
                                                                         </DropdownMenuContent>
@@ -750,7 +645,14 @@ export default function AdminStudents() {
                                                 <p className="mt-1 text-gray-500">
                                                     検索条件に一致する生徒がありません。新しい生徒を追加してください。
                                                 </p>
-                                                <Button className="mt-4 bg-purple-600 hover:bg-purple-700">
+                                                <Button
+                                                    className="mt-4 bg-purple-600 hover:bg-purple-700 cursor-pointer"
+                                                    onClick={() =>
+                                                        router.push(
+                                                            `${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/student/create`
+                                                        )
+                                                    }
+                                                >
                                                     <UserPlus className="mr-2 h-4 w-4" />
                                                     生徒を追加
                                                 </Button>
@@ -766,14 +668,14 @@ export default function AdminStudents() {
 
             {/* 生徒詳細ダイアログ */}
             <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[120vh] overflow-y-auto">
                     {selectedStudent && (
                         <>
                             <DialogHeader>
                                 <DialogTitle className="flex items-center gap-3">
                                     <Avatar className="w-12 h-12">
                                         <AvatarImage
-                                            src={selectedStudent.avatar || '/placeholder.svg'}
+                                            src={'/placeholder.svg'}
                                             alt={selectedStudent.name}
                                         />
                                         <AvatarFallback className="bg-purple-100 text-purple-600">
@@ -785,7 +687,7 @@ export default function AdminStudents() {
                                             {selectedStudent.name}
                                         </h3>
                                         <p className="text-sm text-gray-500">
-                                            {selectedStudent.grade} {selectedStudent.class}
+                                            {selectedStudent.grade}
                                         </p>
                                     </div>
                                 </DialogTitle>
@@ -794,12 +696,19 @@ export default function AdminStudents() {
 
                             <Tabs defaultValue="overview" className="mt-4">
                                 <TabsList className="grid w-full grid-cols-3">
-                                    <TabsTrigger value="overview">概要</TabsTrigger>
-                                    <TabsTrigger value="progress">学習進捗</TabsTrigger>
-                                    <TabsTrigger value="contact">連絡先</TabsTrigger>
+                                    <TabsTrigger value="overview" className="cursor-pointer">
+                                        概要
+                                    </TabsTrigger>
+                                    <TabsTrigger value="progress" className="cursor-pointer">
+                                        学習進捗
+                                    </TabsTrigger>
+                                    <TabsTrigger value="contact" className="cursor-pointer">
+                                        連絡先
+                                    </TabsTrigger>
                                 </TabsList>
 
                                 <TabsContent value="overview" className="space-y-4">
+                                    {/*
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         {[
                                             {
@@ -850,20 +759,33 @@ export default function AdminStudents() {
                                             );
                                         })}
                                     </div>
+                                    */}
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <h4 className="font-medium text-gray-900">基本情報</h4>
                                             <div className="space-y-1 text-sm">
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-500">登録日:</span>
-                                                    <span>{selectedStudent.registeredAt}</span>
+                                                    <span className="text-gray-500">登録日:　</span>
+                                                    <span>
+                                                        {selectedStudent.registeredAt
+                                                            ? dayjs(
+                                                                  selectedStudent.registeredAt
+                                                              ).format('YYYY/MM/DD HH:mm')
+                                                            : '不明'}
+                                                    </span>
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-gray-500">
-                                                        最終アクティブ:
+                                                        最終アクティブ:　
                                                     </span>
-                                                    <span>{selectedStudent.lastActive}</span>
+                                                    <span>
+                                                        {selectedStudent?.lastLoginAt
+                                                            ? dayjs(
+                                                                  selectedStudent.lastLoginAt
+                                                              ).format('YYYY/MM/DD HH:mm')
+                                                            : '不明'}
+                                                    </span>
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-gray-500">
@@ -872,13 +794,15 @@ export default function AdminStudents() {
                                                     <Badge
                                                         variant="outline"
                                                         className={
-                                                            getStatusConfig(selectedStudent.status)
-                                                                .color
+                                                            getStatusConfig(
+                                                                selectedStudent.isActive
+                                                            ).color
                                                         }
                                                     >
                                                         {
-                                                            getStatusConfig(selectedStudent.status)
-                                                                .label
+                                                            getStatusConfig(
+                                                                selectedStudent.isActive
+                                                            ).label
                                                         }
                                                     </Badge>
                                                 </div>
@@ -889,6 +813,7 @@ export default function AdminStudents() {
                                             <h4 className="font-medium text-gray-900">学習統計</h4>
                                             <div className="space-y-2">
                                                 <div>
+                                                    {/*
                                                     <div className="flex justify-between text-sm mb-1">
                                                         <span>正答率</span>
                                                         <span
@@ -903,6 +828,7 @@ export default function AdminStudents() {
                                                         value={selectedStudent.progress.correctRate}
                                                         className="h-2"
                                                     />
+                                                    */}
                                                 </div>
                                             </div>
                                         </div>
@@ -925,33 +851,24 @@ export default function AdminStudents() {
                                         <div className="flex items-center space-x-3">
                                             <Mail className="w-5 h-5 text-gray-400" />
                                             <div>
-                                                <p className="text-sm text-gray-500">
-                                                    メールアドレス
-                                                </p>
+                                                <p className="text-sm text-gray-500">生徒ID</p>
                                                 <p className="font-medium">
-                                                    {selectedStudent.email}
+                                                    {selectedStudent.studentId}
                                                 </p>
                                             </div>
                                         </div>
-                                        {selectedStudent.phone && (
-                                            <div className="flex items-center space-x-3">
-                                                <Phone className="w-5 h-5 text-gray-400" />
-                                                <div>
-                                                    <p className="text-sm text-gray-500">
-                                                        電話番号
-                                                    </p>
-                                                    <p className="font-medium">
-                                                        {selectedStudent.phone}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
                                         <div className="flex items-center space-x-3">
                                             <Calendar className="w-5 h-5 text-gray-400" />
                                             <div>
                                                 <p className="text-sm text-gray-500">登録日</p>
                                                 <p className="font-medium">
-                                                    {selectedStudent.registeredAt}
+                                                    <span>
+                                                        {selectedStudent.registeredAt
+                                                            ? dayjs(
+                                                                  selectedStudent.registeredAt
+                                                              ).format('YYYY/MM/DD HH:mm')
+                                                            : '不明'}
+                                                    </span>
                                                 </p>
                                             </div>
                                         </div>
@@ -961,12 +878,16 @@ export default function AdminStudents() {
                                         <div className="flex space-x-2">
                                             <Button
                                                 size="sm"
-                                                className="bg-purple-600 hover:bg-purple-700"
+                                                className="bg-purple-600 hover:bg-purple-700 cursor-pointer"
                                             >
                                                 <Mail className="w-4 h-4 mr-2" />
                                                 メッセージ送信
                                             </Button>
-                                            <Button size="sm" variant="outline">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="cursor-pointer"
+                                            >
                                                 <Edit className="w-4 h-4 mr-2" />
                                                 編集
                                             </Button>

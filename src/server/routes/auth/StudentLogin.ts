@@ -2,13 +2,13 @@
 
 import { Hono } from 'hono';
 import { db } from '@/server/db';
-import { users, students, sessions } from '@/server/db/schema';
+import { users, students } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { lucia } from '@/lib/auth/lucia';
 import { setCookie } from 'hono/cookie';
 import bcrypt from 'bcryptjs';
 
-const studentLogin = new Hono().post('/studentLogin', async (c) => {
+export const studentLogin = new Hono().post('/studentLogin', async (c) => {
     try {
         const body = await c.req.json();
         const { studentId, password } = body;
@@ -35,5 +35,3 @@ const studentLogin = new Hono().post('/studentLogin', async (c) => {
         return c.json({ error: `サーバーエラーが発生しました ${error}`, flg: false }, 500);
     }
 });
-
-export default studentLogin;

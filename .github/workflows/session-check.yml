@@ -1,0 +1,17 @@
+#セッションをチェックするアクション（5分に1回の頻度で発火）
+
+name: Supabase Session Check
+
+on:
+    schedule:
+        - cron: '*/5 * * * *'
+    workflow_dispatch:
+
+jobs:
+    session-check:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Call Supabase session check endpoint
+              run: |
+                  curl -s "${{ secrets.NEXT_PUBLIC_BASE_URL }}/api/auth/sessionCheck" > /dev/null

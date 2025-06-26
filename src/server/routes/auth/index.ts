@@ -3,11 +3,13 @@ import { studentLogin } from './StudentLogin';
 import { studentRegister } from './StudentRegister';
 import { sessionCheck } from './sessionCheck';
 import { getAllStudents } from './getAllStudent';
+import { DeleteStudent } from './DeleteStudent';
 
 const authApp = new Hono()
     .route('/', studentLogin)
     .route('/', studentRegister)
     .route('/', sessionCheck)
-    .route('/', getAllStudents);
+    .route('/', getAllStudents)
+    .route('/', DeleteStudent);
 
 export default authApp;

@@ -2,7 +2,7 @@
 
 import { Hono } from 'hono';
 import { db } from '@/server/db';
-import { users, students } from '@/server/db/schema';
+import { users, students, sessions } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { lucia } from '@/lib/auth/lucia';
 import { setCookie } from 'hono/cookie';

@@ -12,7 +12,7 @@ export const studentRegister = new Hono().post('/studentRegister', async (c) => 
 
         const exists = await db.select().from(users).where(eq(users.studentId, studentId));
         if (exists.length > 0) {
-            return c.json({ error: 'この生徒IDは既に登録されています', flg: false }, 409);
+            return c.json({ error: 'この生徒IDは既に登録されています', flg: false }, 401);
         }
 
         const stretch = Number(process.env.SALT_HASH);

@@ -13,6 +13,8 @@ import {
 import { BookOpen, LayoutDashboard, Users, Mail, Settings, LogOut, User } from 'lucide-react';
 import { useState } from 'react';
 import { motion, MotionConfig } from 'framer-motion';
+import { supabase } from '@/lib/SupabaseClient';
+import toast from 'react-hot-toast';
 
 interface AdminNavigationProps {
     currentPage: string;
@@ -20,6 +22,7 @@ interface AdminNavigationProps {
 
 export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -41,8 +44,35 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
         setIsMobileMenuOpen(false);
     };
 
-    const handleLogout = () => {
-        console.log('Logout clicked');
+    // ログアウト処理
+    const handleLogout = async () => {
+        toast.promise(
+            new Promise(async (resolve, reject) => {
+                try {
+                    setIsLoading(true);
+                    const { error } = await supabase.auth.signOut();
+
+                    if (error) {
+                        reject('ログアウト中にエラーが発生しました');
+                        console.log(error);
+                        return;
+                    } else {
+                        resolve('ログアウトしました!');
+                        router.push('/');
+                    }
+                } catch (error) {
+                    console.log(error);
+                    reject('不明なエラーが発生しました');
+                } finally {
+                    setIsLoading(false);
+                }
+            }),
+            {
+                loading: 'ログアウト中です...',
+                success: 'ログアウトしました!',
+                error: (message: string) => message,
+            }
+        );
     };
 
     return (
@@ -71,6 +101,7 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
                             return (
                                 <motion.button
                                     key={item.id}
+                                    disabled={isLoading}
                                     onClick={() => navigateTo(item.href)}
                                     layout
                                     transition={{ type: 'spring', stiffness: 400, damping: 50 }}
@@ -107,6 +138,7 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
                                 <Button
                                     variant="ghost"
                                     className="flex items-center space-x-2 p-2 cursor-pointer"
+                                    disabled={isLoading}
                                 >
                                     <div className="hidden sm:block text-left">
                                         <p className="text-sm font-medium text-gray-900">
@@ -119,13 +151,14 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
                             <DropdownMenuContent align="end" className="w-56">
                                 <DropdownMenuLabel>マイアカウント</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="cursor-pointer">
+                                <DropdownMenuItem className="cursor-pointer" disabled={isLoading}>
                                     <User className="w-4 h-4 mr-2" />
                                     プロフィール
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     onClick={() => navigateTo('/student/setting')}
                                     className="cursor-pointer"
+                                    disabled={isLoading}
                                 >
                                     <Settings className="w-4 h-4 mr-2" />
                                     設定
@@ -133,9 +166,10 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     onClick={handleLogout}
-                                    className="text-red-600 hover:bg-red-200 cursor-pointer"
+                                    disabled={isLoading}
+                                    className="text-red-600 hover:!bg-red-100 focus:!text-red-600 cursor-pointer focus:!bg-red-100"
                                 >
-                                    <LogOut className="w-4 h-4 mr-2" />
+                                    <LogOut className="w-4 h-4 mr-2 focus:!text-red-600" />
                                     ログアウト
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -145,6 +179,7 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
                         <MotionConfig transition={{ duration: 0.5, ease: 'easeInOut' }}>
                             <motion.button
                                 initial={false}
+                                disabled={isLoading}
                                 animate={isMobileMenuOpen ? 'open' : 'closed'}
                                 onClick={() => setIsMobileMenuOpen((prev) => !prev)}
                                 className="relative w-10 h-10 md:hidden rounded-full bg-transparent"
@@ -179,6 +214,7 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
                                 return (
                                     <Button
                                         key={item.id}
+                                        disabled={isLoading}
                                         onClick={() => navigateTo(item.href)}
                                         variant={isActive ? 'default' : 'ghost'}
                                         className={`w-full justify-start space-x-2 ${

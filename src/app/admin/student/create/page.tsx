@@ -5,6 +5,7 @@
 
 import type React from 'react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +50,7 @@ export default function AdminStudentCreate() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [currentTab, setCurrentTab] = useState('basic');
+    const router = useRouter();
 
     // 学年とクラスのオプション
     const gradeOptions = [
@@ -140,6 +142,7 @@ export default function AdminStudentCreate() {
 
                     if (responceData.flg) {
                         resolve(responceData.message);
+                        router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/student`);
                     } else {
                         reject(responceData.error);
                     }

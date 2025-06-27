@@ -2,7 +2,7 @@
 
 import { Hono } from 'hono';
 import { db } from '@/server/db';
-import { users, students } from '@/server/db/schema';
+import { users, students, sessions } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { lucia } from '@/lib/auth/lucia';
 import { setCookie } from 'hono/cookie';
@@ -28,6 +28,14 @@ export const studentLogin = new Hono().post('/studentLogin', async (c) => {
         setCookie(c, sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
 
         await db.update(students).set({ lastLoginAt: new Date() }).where(eq(students.id, user.id));
+
+        const newExpireAt = new Date(Date.now() + 1000 * 60 * 60 * 12); // 半日でセッションを破棄
+
+        // セッション期限を上書き
+        await db
+            .update(sessions)
+            .set({ expiresAt: newExpireAt })
+            .where(eq(sessions.id, session.id));
 
         return c.json({ message: 'ログインしました!', flg: true });
     } catch (error) {

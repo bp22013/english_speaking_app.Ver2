@@ -1,3 +1,5 @@
+/* 各生徒の情報や統計を表示するページ */
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -55,6 +57,7 @@ import { StudentDataDownload } from '@/app/components/studentDataDownloadButton'
 import Loading from '@/app/loading';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { DeleteConfirmationModal } from '@/app/components/DeleteStudentConfirmModal';
 import { client } from '@/lib/HonoClient';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
@@ -73,6 +76,10 @@ const grades = ['中学1年生', '中学2年生', '中学3年生', '高校1年�
 
 export default function AdminStudents() {
     const [students, setStudents] = useState<Student[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [targetStudent, setTargetStudent] = useState<{ studentId: string; name: string } | null>(
+        null
+    );
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedGrade, setSelectedGrade] = useState<string>('all');
@@ -141,6 +148,7 @@ export default function AdminStudents() {
             return 0;
         });
 
+    // Selectの情報をソート
     const handleSort = (field: string) => {
         if (sortField === field) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -150,13 +158,57 @@ export default function AdminStudents() {
         }
     };
 
-    const handleViewDetails = (student: Student) => {
+    // 生徒の詳細のモーダルを開く
+    const handleViewStudentDetails = (student: Student) => {
         setSelectedStudent(student);
         setIsDetailOpen(true);
     };
 
-    const handleDeleteStudent = (studentId: string) => {
-        //setStudents(students.filter((student) => student.studentId !== studentId));
+    // 削除確認モーダルを開く
+    const handleViewDeleteConfirmModal = (studentId: string, name: string) => {
+        setTargetStudent({ studentId, name });
+        setIsModalOpen(true);
+    };
+
+    // モーダル確認後の処理
+    const handleConfirmDelete = () => {
+        if (targetStudent) {
+            handleDeleteStudent(targetStudent.studentId);
+            setIsModalOpen(false);
+        }
+    };
+
+    // 生徒を削除
+    const handleDeleteStudent = async (studentId: string) => {
+        setIsLoading(true);
+
+        toast.promise(
+            new Promise(async (resolve, reject) => {
+                try {
+                    const res = await client.api.auth.deleteStudent.$post({
+                        json: { studentId },
+                    });
+
+                    const data = await res.json();
+
+                    if (data.flg) {
+                        resolve(data.message);
+                        router.refresh();
+                    } else {
+                        reject(data.message);
+                    }
+                } catch (error) {
+                    reject(`不明なエラーが発生しました: ${error}`);
+                } finally {
+                    setIsLoading(false);
+                }
+            }),
+            {
+                loading: '対象の生徒を削除しています...',
+                success: '対象の生徒を削除しました!',
+                error: (message: string) => message,
+            }
+        );
     };
 
     const getStatusConfig = (status: boolean): { label: string; color: string } => {
@@ -480,10 +532,7 @@ export default function AdminStudents() {
                                                                 initial={{ opacity: 0 }}
                                                                 animate={{ opacity: 1 }}
                                                                 exit={{ opacity: 0 }}
-                                                                className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
-                                                                onClick={() =>
-                                                                    handleViewDetails(student)
-                                                                }
+                                                                className="border-b border-gray-100 hover:bg-gray-50"
                                                             >
                                                                 <td className="px-4 py-4">
                                                                     <div className="flex items-center space-x-3">
@@ -597,7 +646,7 @@ export default function AdminStudents() {
                                                                             <DropdownMenuSeparator />
                                                                             <DropdownMenuItem
                                                                                 onClick={() =>
-                                                                                    handleViewDetails(
+                                                                                    handleViewStudentDetails(
                                                                                         student
                                                                                     )
                                                                                 }
@@ -610,15 +659,23 @@ export default function AdminStudents() {
                                                                                 <Edit className="mr-2 h-4 w-4" />
                                                                                 編集
                                                                             </DropdownMenuItem>
-                                                                            <DropdownMenuItem className="cursor-pointer">
+                                                                            <DropdownMenuItem
+                                                                                className="cursor-pointer"
+                                                                                onClick={() =>
+                                                                                    router.push(
+                                                                                        `${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/messages`
+                                                                                    )
+                                                                                }
+                                                                            >
                                                                                 <Mail className="mr-2 h-4 w-4" />
                                                                                 メッセージ送信
                                                                             </DropdownMenuItem>
                                                                             <DropdownMenuSeparator />
                                                                             <DropdownMenuItem
                                                                                 onClick={() =>
-                                                                                    handleDeleteStudent(
-                                                                                        student.studentId
+                                                                                    handleViewDeleteConfirmModal(
+                                                                                        student.studentId,
+                                                                                        student.name
                                                                                     )
                                                                                 }
                                                                                 className="text-red-600 hover:!bg-red-100 focus:!text-red-600 cursor-pointer focus:!bg-red-100"
@@ -879,6 +936,11 @@ export default function AdminStudents() {
                                             <Button
                                                 size="sm"
                                                 className="bg-purple-600 hover:bg-purple-700 cursor-pointer"
+                                                onClick={() =>
+                                                    router.push(
+                                                        `${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/messages`
+                                                    )
+                                                }
                                             >
                                                 <Mail className="w-4 h-4 mr-2" />
                                                 メッセージ送信
@@ -899,6 +961,12 @@ export default function AdminStudents() {
                     )}
                 </DialogContent>
             </Dialog>
+            <DeleteConfirmationModal
+                open={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                studentName={targetStudent?.name || ''}
+            />
         </div>
     );
 }

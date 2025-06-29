@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { handleCanon } from '@/app/components/particle/happyCanon';
+import { useSession } from '@/app/hook/useSession';
+import Loading from '@/app/loading';
 
 // 問題データの型定義
 interface QuizItem {
@@ -72,6 +74,7 @@ export default function QuizPage() {
     const inputRef = useRef<HTMLInputElement>(null);
 
     const currentQuiz = sampleQuizItems[currentQuizIndex];
+    const { isAuthenticated, loading } = useSession();
     const router = useRouter();
 
     // 問題が変わったらフォームをリセット
@@ -85,7 +88,11 @@ export default function QuizPage() {
         if (inputRef.current) {
             inputRef.current.focus();
         }
-    }, [currentQuizIndex]);
+
+        if (!loading && !isAuthenticated) {
+            router.push('/');
+        }
+    }, [currentQuizIndex, loading, isAuthenticated, router]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -156,6 +163,10 @@ export default function QuizPage() {
         if (scorePercentage >= 50) return '頑張りました。復習して再挑戦しましょう。';
         return '基礎からしっかり復習しましょう。';
     };
+
+    if (loading) {
+        return <Loading />;
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">

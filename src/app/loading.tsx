@@ -6,20 +6,32 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BookOpen, Sparkles, GraduationCap } from 'lucide-react';
 
+type FloatingWord = {
+    word: string;
+    initialX: number;
+    targetX: number;
+};
+
 export default function Loading() {
-    const [screenWidth, setScreenWidth] = useState<number>(0);
+    const [screenWidth, setScreenWidth] = useState(768);
+    const [floatingWords, setFloatingWords] = useState<FloatingWord[] | null>(null);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            setScreenWidth(window.innerWidth);
+            const width = window.innerWidth;
+            setScreenWidth(width);
+
+            const words = ['Hello', 'Study', 'Learn', 'Success', 'English'].map((word) => ({
+                word,
+                initialX: Math.random() * width,
+                targetX: Math.random() * (width - 100),
+            }));
+            setFloatingWords(words);
         }
     }, []);
 
-    // SSR中は仮の幅を使用
-    const width = screenWidth || 768;
-
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center relative overflow-hidden">
             <div className="text-center">
                 {/* メインローディングアニメーション */}
                 <motion.div
@@ -50,7 +62,6 @@ export default function Loading() {
                         <BookOpen className="w-10 h-10 text-white" />
                     </motion.div>
 
-                    {/* 周りの装飾 */}
                     <motion.div
                         className="absolute -top-2 -right-2"
                         animate={{
@@ -135,39 +146,29 @@ export default function Loading() {
                         }}
                     />
                 </motion.div>
-
-                {/* 浮遊する単語カード */}
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    {['Hello', 'Study', 'Learn', 'Success', 'English'].map((word, index) => {
-                        const initialX = Math.random() * width;
-                        const targetX = Math.random() * (width - 100);
-                        return (
-                            <motion.div
-                                key={word}
-                                className="absolute bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg text-sm font-medium text-gray-700 shadow-sm"
-                                initial={{
-                                    opacity: 0,
-                                    x: initialX,
-                                    y: 800,
-                                }}
-                                animate={{
-                                    opacity: [0, 1, 0],
-                                    y: -50,
-                                    x: targetX,
-                                }}
-                                transition={{
-                                    duration: 4 + index,
-                                    repeat: Number.POSITIVE_INFINITY,
-                                    delay: index * 0.8,
-                                    ease: 'linear',
-                                }}
-                            >
-                                {word}
-                            </motion.div>
-                        );
-                    })}
-                </div>
             </div>
+
+            {/* 浮遊する単語カード（ランダム位置 → useEffectでのみ描画） */}
+            {floatingWords && (
+                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    {floatingWords.map(({ word, initialX, targetX }, index) => (
+                        <motion.div
+                            key={word}
+                            className="absolute bg-white/80 backdrop-blur-sm px-3 py-1 rounded-lg text-sm font-medium text-gray-700 shadow-sm"
+                            initial={{ opacity: 0, x: initialX, y: 800 }}
+                            animate={{ opacity: [0, 1, 0], y: -50, x: targetX }}
+                            transition={{
+                                duration: 4 + index,
+                                repeat: Number.POSITIVE_INFINITY,
+                                delay: index * 0.8,
+                                ease: 'linear',
+                            }}
+                        >
+                            {word}
+                        </motion.div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

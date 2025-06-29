@@ -5,6 +5,7 @@ import { sessionCheck } from './sessionCheck';
 import { getAllStudents } from './getAllStudent';
 import { DeleteStudent } from './DeleteStudent';
 import { studentLogout } from './StudentLogout';
+import { hookSession } from './useHookSession';
 
 const authApp = new Hono()
     .route('/', studentLogin)
@@ -12,6 +13,7 @@ const authApp = new Hono()
     .route('/', sessionCheck)
     .route('/', getAllStudents)
     .route('/', DeleteStudent)
-    .route('/', studentLogout);
+    .route('/', studentLogout)
+    .route('/', hookSession);
 
 export default authApp;

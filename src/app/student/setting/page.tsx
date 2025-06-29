@@ -19,7 +19,6 @@ import { StudentNavigation } from '../../components/StudentNavigationBar';
 import { PasswordChangeDialog } from '../../components/StudentPassChangeModal';
 import { PageTransition, FadeIn, SoftFadeIn } from '../../components/page-transition';
 import { motion } from 'framer-motion';
-import toast from 'react-hot-toast';
 
 export default function SettingsPage() {
     const [notifications, setNotifications] = useState({

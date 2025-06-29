@@ -1,7 +1,7 @@
 /* 生徒のログアウト用API */
 
 import { Hono } from 'hono';
-import { lucia } from '@/lib/auth/lucia';
+import { lucia } from '@/server/lib/lucia';
 import { deleteCookie } from 'hono/cookie';
 import { sessions } from '@/server/db/schema';
 import { db } from '@/server/db';

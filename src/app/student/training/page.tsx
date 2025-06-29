@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import {
 } from '../../components/page-transition';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useSession } from '@/app/hook/useSession';
+import Loading from '@/app/loading';
 
 const recentSessions = [
     {
@@ -33,8 +35,14 @@ const recentSessions = [
 export default function TrainingPage() {
     const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
     const [selectedReviewLevel, setSelectedReviewLevel] = useState<number | null>(null);
-
+    const { isAuthenticated, loading } = useSession();
     const router = useRouter();
+
+    useEffect(() => {
+        if (!loading && !isAuthenticated) {
+            router.push('/');
+        }
+    }, [loading, isAuthenticated, router]);
 
     const TransitionQuestionPage = () => {
         if (selectedLevel) {
@@ -51,6 +59,10 @@ export default function TrainingPage() {
             toast.error('レベルを選択してください');
         }
     };
+
+    if (loading) {
+        return <Loading />;
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">

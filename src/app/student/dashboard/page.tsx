@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { BookOpen, Target, TrendingUp, Award, Clock, Star, Flame } from 'lucide-react';
 import { StudentNavigation } from '../../components/StudentNavigationBar';
+import { useSession } from '@/app/hook/useSession';
+import { useRouter } from 'next/navigation';
+import Loading from '@/app/loading';
 import {
     PageTransition,
     StaggerContainer,
@@ -13,8 +16,18 @@ import {
     ScaleIn,
 } from '../../components/page-transition';
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
 
 export default function DashboardPage() {
+    const { isAuthenticated, loading } = useSession();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!loading && !isAuthenticated) {
+            router.push('/');
+        }
+    }, [loading, isAuthenticated, router]);
+
     const statsCards = [
         {
             title: '今日の学習',
@@ -46,6 +59,10 @@ export default function DashboardPage() {
             color: 'red',
         },
     ];
+
+    if (loading) {
+        return <Loading />;
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">

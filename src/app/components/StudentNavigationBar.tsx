@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Badge from '@mui/material/Badge';
 import { Button } from '@/components/ui/button';
@@ -16,12 +16,24 @@ import { BookOpen, Home, Dumbbell, Settings, LogOut, User } from 'lucide-react';
 import { GoBell } from 'react-icons/go';
 import { motion, MotionConfig } from 'framer-motion';
 import { LogoutConfirmDialog } from './StudentLogoutConfirmModal';
+import Loading from '../loading';
+import { useSession } from '../hook/useSession';
+import toast from 'react-hot-toast';
 
 export function StudentNavigation() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const router = useRouter();
     const pathname = usePathname();
+
+    const { isAuthenticated, loading } = useSession();
+
+    useEffect(() => {
+        if (!loading && !isAuthenticated) {
+            toast.error('セッションが有効ではありません、ログインし直してください');
+            router.push('/');
+        }
+    }, [loading, isAuthenticated, router]);
 
     const navigationItems = [
         { id: 'dashboard', label: 'トップ', icon: Home, href: '/student/dashboard' },
@@ -33,6 +45,10 @@ export function StudentNavigation() {
         router.push(href);
         setIsMobileMenuOpen(false);
     };
+
+    if (loading) {
+        return <Loading />;
+    }
 
     return (
         <>

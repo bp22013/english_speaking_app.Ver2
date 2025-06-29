@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +56,10 @@ import {
     SoftFadeIn,
 } from '../../components/page-transition';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSession } from '@/app/hook/useSession';
+import { useRouter } from 'next/navigation';
+import Loadable from 'next/dist/shared/lib/loadable.shared-runtime';
+import Loading from '@/app/loading';
 
 interface Message {
     id: string;
@@ -169,8 +173,15 @@ export default function MessagesPage() {
     const [selectedType, setSelectedType] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-
+    const { isAuthenticated, loading } = useSession();
     const unreadCount = messages.filter((msg) => !msg.isRead).length;
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!loading && !isAuthenticated) {
+            router.push('/');
+        }
+    }, [loading, isAuthenticated, router]);
 
     const filteredMessages = messages.filter((message) => {
         const matchesType = selectedType === 'all' || message.type === selectedType;
@@ -207,6 +218,10 @@ export default function MessagesPage() {
                 return 'border-l-gray-300';
         }
     };
+
+    if (loading) {
+        return <Loading />;
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">

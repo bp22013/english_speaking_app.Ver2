@@ -4,7 +4,7 @@ import { Hono } from 'hono';
 import { db } from '@/server/db';
 import { users, students, sessions } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { lucia } from '@/lib/auth/lucia';
+import { lucia } from '@/server/lib/lucia';
 import { setCookie } from 'hono/cookie';
 import bcrypt from 'bcryptjs';
 

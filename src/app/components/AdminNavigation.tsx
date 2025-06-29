@@ -1,3 +1,5 @@
+/* 管理者用ナビゲーションバーコンポーネント */
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -13,7 +15,7 @@ import {
 import { BookOpen, LayoutDashboard, Users, Mail, Settings, LogOut, User } from 'lucide-react';
 import { useState } from 'react';
 import { motion, MotionConfig } from 'framer-motion';
-import { supabase } from '@/lib/SupabaseClient';
+import { logout } from '@/lib/supabase/action';
 import toast from 'react-hot-toast';
 
 interface AdminNavigationProps {
@@ -44,24 +46,21 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
         setIsMobileMenuOpen(false);
     };
 
-    // ログアウト処理
+    // ログアウト処理（サーバーアクションを使用）
     const handleLogout = async () => {
         toast.promise(
             new Promise(async (resolve, reject) => {
                 try {
                     setIsLoading(true);
-                    const { error } = await supabase.auth.signOut();
+                    const result = await logout();
 
-                    if (error) {
-                        reject('ログアウト中にエラーが発生しました');
-                        console.log(error);
-                        return;
-                    } else {
-                        resolve('ログアウトしました!');
+                    if (result.success) {
+                        resolve(result.message);
                         router.push('/');
+                    } else {
+                        reject(result.error);
                     }
                 } catch (error) {
-                    console.log(error);
                     reject('不明なエラーが発生しました');
                 } finally {
                     setIsLoading(false);
@@ -89,7 +88,7 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
                         </div>
                         <div>
                             <h1 className="text-xl font-bold text-gray-900">VocabMaster</h1>
-                            <p className="text-xs text-gray-500">Student Portal</p>
+                            <p className="text-xs text-gray-500">Admin Portal</p>
                         </div>
                     </div>
 
@@ -141,10 +140,8 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
                                     disabled={isLoading}
                                 >
                                     <div className="hidden sm:block text-left">
-                                        <p className="text-sm font-medium text-gray-900">
-                                            田中太郎
-                                        </p>
-                                        <p className="text-xs text-gray-500">高校2年生</p>
+                                        <p className="text-sm font-medium text-gray-900">管理者</p>
+                                        <p className="text-xs text-gray-500">システム管理者</p>
                                     </div>
                                 </Button>
                             </DropdownMenuTrigger>
@@ -156,7 +153,7 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
                                     プロフィール
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                    onClick={() => navigateTo('/student/setting')}
+                                    onClick={() => navigateTo('/admin/setting')}
                                     className="cursor-pointer"
                                     disabled={isLoading}
                                 >
@@ -219,7 +216,7 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
                                         variant={isActive ? 'default' : 'ghost'}
                                         className={`w-full justify-start space-x-2 ${
                                             isActive
-                                                ? 'bg-blue-600 text-white'
+                                                ? 'bg-purple-600 text-white'
                                                 : 'text-gray-600 hover:text-gray-900'
                                         }`}
                                     >

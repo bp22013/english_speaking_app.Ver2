@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { handleCanon } from '@/app/components/particle/happyCanon';
-import { useSession } from '@/app/hook/useSession';
+import { useAuth } from '@/app/context/AuthContext';
 import Loading from '@/app/loading';
 
 // 問題データの型定義
@@ -74,7 +74,7 @@ export default function QuizPage() {
     const inputRef = useRef<HTMLInputElement>(null);
 
     const currentQuiz = sampleQuizItems[currentQuizIndex];
-    const { isAuthenticated, loading } = useSession();
+    const { loading } = useAuth();
     const router = useRouter();
 
     // 問題が変わったらフォームをリセット
@@ -88,11 +88,7 @@ export default function QuizPage() {
         if (inputRef.current) {
             inputRef.current.focus();
         }
-
-        if (!loading && !isAuthenticated) {
-            router.push('/');
-        }
-    }, [currentQuizIndex, loading, isAuthenticated, router]);
+    }, [currentQuizIndex, loading]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

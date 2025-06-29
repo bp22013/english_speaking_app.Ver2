@@ -56,9 +56,8 @@ import {
     SoftFadeIn,
 } from '../../components/page-transition';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSession } from '@/app/hook/useSession';
+import { useAuth } from '@/app/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import Loadable from 'next/dist/shared/lib/loadable.shared-runtime';
 import Loading from '@/app/loading';
 
 interface Message {
@@ -173,15 +172,9 @@ export default function MessagesPage() {
     const [selectedType, setSelectedType] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-    const { isAuthenticated, loading } = useSession();
+    const { loading } = useAuth();
     const unreadCount = messages.filter((msg) => !msg.isRead).length;
     const router = useRouter();
-
-    useEffect(() => {
-        if (!loading && !isAuthenticated) {
-            router.push('/');
-        }
-    }, [loading, isAuthenticated, router]);
 
     const filteredMessages = messages.filter((message) => {
         const matchesType = selectedType === 'all' || message.type === selectedType;

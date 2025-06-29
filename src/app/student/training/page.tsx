@@ -14,7 +14,7 @@ import {
 } from '../../components/page-transition';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { useSession } from '@/app/hook/useSession';
+import { useAuth } from '@/app/context/AuthContext';
 import Loading from '@/app/loading';
 
 const recentSessions = [
@@ -35,14 +35,8 @@ const recentSessions = [
 export default function TrainingPage() {
     const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
     const [selectedReviewLevel, setSelectedReviewLevel] = useState<number | null>(null);
-    const { isAuthenticated, loading } = useSession();
+    const { loading } = useAuth();
     const router = useRouter();
-
-    useEffect(() => {
-        if (!loading && !isAuthenticated) {
-            router.push('/');
-        }
-    }, [loading, isAuthenticated, router]);
 
     const TransitionQuestionPage = () => {
         if (selectedLevel) {

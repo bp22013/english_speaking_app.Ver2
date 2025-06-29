@@ -1,22 +1,15 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+/* ミドルウェア */
 
-export async function middleware(req: NextRequest) {
-    const res = NextResponse.next();
-    const supabase = createMiddlewareClient({ req, res });
+import { type NextRequest } from 'next/server';
+import { updateSession } from '@/lib/supabase/middleware';
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user && req.nextUrl.pathname.startsWith('/admin')) {
-        return NextResponse.redirect(new URL('/', req.url));
-    }
-
-    return res;
+export async function middleware(request: NextRequest) {
+    return await updateSession(request);
 }
 
 export const config = {
-    matcher: ['/admin/:path*'],
+    matcher: [
+        '/admin/:path*',
+        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    ],
 };

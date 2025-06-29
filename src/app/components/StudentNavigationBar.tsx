@@ -1,3 +1,5 @@
+/* 生徒用ナビゲーションバーコンポーネント */
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -16,22 +18,15 @@ import { BookOpen, Home, Dumbbell, Settings, LogOut, User } from 'lucide-react';
 import { GoBell } from 'react-icons/go';
 import { motion, MotionConfig } from 'framer-motion';
 import { LogoutConfirmDialog } from './StudentLogoutConfirmModal';
+import { useAuth } from '../context/AuthContext';
 import Loading from '../loading';
-import { useSession } from '../hook/useSession';
 
 export function StudentNavigation() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const router = useRouter();
     const pathname = usePathname();
-
-    const { isAuthenticated, loading, user } = useSession();
-
-    useEffect(() => {
-        if (!loading && !isAuthenticated) {
-            router.push('/');
-        }
-    }, [loading, isAuthenticated, router, user]);
+    const { user, loading } = useAuth();
 
     const navigationItems = [
         { id: 'dashboard', label: 'トップ', icon: Home, href: '/student/dashboard' },

@@ -15,10 +15,12 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, LogOut, Save, Camera } from 'lucide-react';
+import { useAuth } from '@/app/context/AuthContext';
 import { StudentNavigation } from '../../components/StudentNavigationBar';
 import { PasswordChangeDialog } from '../../components/StudentPassChangeModal';
 import { PageTransition, FadeIn, SoftFadeIn } from '../../components/page-transition';
 import { motion } from 'framer-motion';
+import Loading from '@/app/loading';
 
 export default function SettingsPage() {
     const [notifications, setNotifications] = useState({
@@ -27,6 +29,7 @@ export default function SettingsPage() {
         achievements: true,
         newFeatures: false,
     });
+    const { loading } = useAuth();
 
     const [profile, setProfile] = useState({
         name: '田中太郎',
@@ -41,6 +44,10 @@ export default function SettingsPage() {
 
     function handlePasswordChange(currentPassword: string, newPassword: string): Promise<void> {
         throw new Error('Function not implemented.');
+    }
+
+    if (loading) {
+        return <Loading />;
     }
 
     return (

@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { login } from '@/lib/supabase/action';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -23,7 +24,6 @@ import {
     EyeOff,
 } from 'lucide-react';
 import Link from 'next/link';
-import { supabase } from '@/lib/SupabaseClient';
 import toast from 'react-hot-toast';
 import { client } from '@/lib/HonoClient';
 import {
@@ -55,26 +55,21 @@ export default function LoginPage() {
         mode: 'onChange',
     });
 
-    // 管理者のログイン用関数（supabase）
+    // 管理者のログイン用関数（サーバーアクションを使用）
     const adminHandleLogin: SubmitHandler<AdminLoginFormData> = async (data) => {
         setIsLoading(true);
 
         toast.promise(
             new Promise(async (resolve, reject) => {
                 try {
-                    const { error } = await supabase.auth.signInWithPassword({
-                        email: data.email,
-                        password: data.adminPassword,
-                    });
+                    const result = await login(data);
 
-                    if (error) {
-                        if (error.message == 'Invalid login credentials') {
-                            reject('メールアドレスまたはパスワードが違います');
-                        }
+                    if (result.success) {
+                        resolve(result.message);
+                        // リダイレクト処理をクライアント側で実行
+                        router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/dashboard`);
                     } else {
-                        resolve('ログインしました!');
-                        await supabase.auth.getSession();
-                        location.href = `${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/dashboard`;
+                        reject(result.error);
                     }
                 } catch (error) {
                     reject(`不明なエラーが発生しました: ${error}`);

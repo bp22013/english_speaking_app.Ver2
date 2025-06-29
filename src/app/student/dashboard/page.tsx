@@ -1,3 +1,5 @@
+/* 生徒用ダッシュボードページ */
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { BookOpen, Target, TrendingUp, Award, Clock, Star, Flame } from 'lucide-react';
 import { StudentNavigation } from '../../components/StudentNavigationBar';
-import { useSession } from '@/app/hook/useSession';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/app/context/AuthContext';
 import Loading from '@/app/loading';
 import {
     PageTransition,
@@ -16,17 +17,9 @@ import {
     ScaleIn,
 } from '../../components/page-transition';
 import { motion } from 'framer-motion';
-import { useEffect } from 'react';
 
 export default function DashboardPage() {
-    const { isAuthenticated, loading } = useSession();
-    const router = useRouter();
-
-    useEffect(() => {
-        if (!loading && !isAuthenticated) {
-            router.push('/');
-        }
-    }, [loading, isAuthenticated, router]);
+    const { loading, user } = useAuth();
 
     const statsCards = [
         {
@@ -85,7 +78,7 @@ export default function DashboardPage() {
                                             transition={{ delay: 0.3, duration: 0.6 }}
                                             className="text-2xl font-bold mb-2"
                                         >
-                                            おかえりなさい、田中さん！
+                                            <p>おかえりなさい、{user?.name}さん！</p>
                                         </motion.h1>
                                         <motion.p
                                             initial={{ opacity: 0 }}

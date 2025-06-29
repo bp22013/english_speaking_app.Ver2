@@ -10,13 +10,9 @@ export async function middleware(req: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser();
 
-    if (user && req.nextUrl.pathname === '/admin') {
+    if (!user && req.nextUrl.pathname.startsWith('/admin')) {
         return NextResponse.redirect(new URL('/', req.url));
     }
 
     return res;
 }
-
-export const config = {
-    matcher: ['/', '/admin'],
-};

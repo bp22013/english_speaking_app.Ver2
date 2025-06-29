@@ -18,7 +18,6 @@ import { motion, MotionConfig } from 'framer-motion';
 import { LogoutConfirmDialog } from './StudentLogoutConfirmModal';
 import Loading from '../loading';
 import { useSession } from '../hook/useSession';
-import toast from 'react-hot-toast';
 
 export function StudentNavigation() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -30,7 +29,6 @@ export function StudentNavigation() {
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
-            toast.error('セッションが有効ではありません、ログインし直してください');
             router.push('/');
         }
     }, [loading, isAuthenticated, router]);

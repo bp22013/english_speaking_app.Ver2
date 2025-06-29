@@ -73,7 +73,8 @@ export default function LoginPage() {
                         }
                     } else {
                         resolve('ログインしました!');
-                        router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/dashboard`);
+                        await supabase.auth.getSession();
+                        location.href = `${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/dashboard`;
                     }
                 } catch (error) {
                     reject(`不明なエラーが発生しました: ${error}`);

@@ -104,6 +104,7 @@ export const adminMessages = pgTable('admin_messages', {
     sentAt: timestamp('sent_at', { withTimezone: true }),
 });
 
+// lucia認証用テーブル（生徒側）
 export const users = pgTable('user', {
     id: text('id').primaryKey(),
     studentId: text('student_id').unique().notNull(),
@@ -112,6 +113,7 @@ export const users = pgTable('user', {
     image: text('image'),
 });
 
+// 生徒側のセッションテーブル
 export const sessions = pgTable('session', {
     id: text('id').primaryKey(),
     userId: text('user_id').notNull(),

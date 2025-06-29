@@ -2,7 +2,7 @@
 
 import { Hono } from 'hono';
 import { db } from '@/server/db';
-import { students } from '@/server/db/schema';
+import { students, users } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 
 export const DeleteStudent = new Hono().post('/deleteStudent', async (c) => {
@@ -15,7 +15,9 @@ export const DeleteStudent = new Hono().post('/deleteStudent', async (c) => {
             return c.json({ message: 'その生徒は存在しません', flg: false }, 401);
         }
 
+        // 対称性とに関するデータを全て削除
         await db.delete(students).where(studentId);
+        await db.delete(users).where(studentId);
 
         return c.json({ message: '対象の生徒を削除しました!', flg: true }, 200);
     } catch (error) {

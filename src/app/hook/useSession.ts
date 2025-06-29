@@ -6,9 +6,17 @@ import { useEffect, useState } from 'react';
 import { client } from '@/lib/HonoClient';
 import toast from 'react-hot-toast';
 
+type Student = {
+    studentId: string;
+    name: string;
+    grade: string | null;
+    sessionId: string | null;
+};
+
 export const useSession = () => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(true);
+    const [user, setUser] = useState<Student | null>(null);
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
@@ -26,6 +34,7 @@ export const useSession = () => {
                     });
                 }
 
+                setUser(data.user);
                 return authenticated;
             } catch (error: any) {
                 setError(error);
@@ -41,5 +50,5 @@ export const useSession = () => {
         fetchSession();
     }, []);
 
-    return { isAuthenticated, loading, error };
+    return { isAuthenticated, loading, error, user };
 };

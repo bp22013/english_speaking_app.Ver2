@@ -25,13 +25,13 @@ export function StudentNavigation() {
     const router = useRouter();
     const pathname = usePathname();
 
-    const { isAuthenticated, loading } = useSession();
+    const { isAuthenticated, loading, user } = useSession();
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
             router.push('/');
         }
-    }, [loading, isAuthenticated, router]);
+    }, [loading, isAuthenticated, router, user]);
 
     const navigationItems = [
         { id: 'dashboard', label: 'トップ', icon: Home, href: '/student/dashboard' },
@@ -131,9 +131,9 @@ export function StudentNavigation() {
                                     >
                                         <div className="hidden sm:block text-left">
                                             <p className="text-sm font-medium text-gray-900">
-                                                田中太郎
+                                                {user?.name}
                                             </p>
-                                            <p className="text-xs text-gray-500">高校2年生</p>
+                                            <p className="text-xs text-gray-500">{user?.grade}</p>
                                         </div>
                                     </Button>
                                 </DropdownMenuTrigger>
@@ -222,7 +222,11 @@ export function StudentNavigation() {
                     )}
                 </div>
             </nav>
-            <LogoutConfirmDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
+            <LogoutConfirmDialog
+                open={isModalOpen}
+                onOpenChange={setIsModalOpen}
+                sessionId={user?.sessionId as string}
+            />
         </>
     );
 }

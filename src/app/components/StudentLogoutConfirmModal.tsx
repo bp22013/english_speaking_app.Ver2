@@ -17,9 +17,10 @@ import { client } from '@/lib/HonoClient';
 interface Props {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    sessionId: string;
 }
 
-export const LogoutConfirmDialog = ({ open, onOpenChange }: Props) => {
+export const LogoutConfirmDialog = ({ open, onOpenChange, sessionId }: Props) => {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
@@ -29,6 +30,7 @@ export const LogoutConfirmDialog = ({ open, onOpenChange }: Props) => {
                 setIsLoading(true);
                 try {
                     const res = await client.api.auth.studentLogout.$post({
+                        json: { sessionId },
                         credentials: 'include',
                     });
 

@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, LogOut, Save } from 'lucide-react';
+import { User, LogOut, Save, Camera } from 'lucide-react';
 import { StudentNavigation } from '../../components/StudentNavigationBar';
 import { PasswordChangeDialog } from '../../components/StudentPassChangeModal';
 import { PageTransition, FadeIn, SoftFadeIn } from '../../components/page-transition';
@@ -39,6 +39,10 @@ export default function SettingsPage() {
     const handleSave = () => {
         console.log('Settings saved');
     };
+
+    function handlePasswordChange(currentPassword: string, newPassword: string): Promise<void> {
+        throw new Error('Function not implemented.');
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 overflow-y-scroll">

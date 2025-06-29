@@ -3,14 +3,17 @@ import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { logger } from 'hono/logger';
 import authApp from './routes/auth';
+import { studentApp } from './middleware/studentApp';
 
-const app = new Hono().basePath('/api');
+const app = new Hono();
 
 app.use('*', cors());
 app.use(csrf());
 app.use(logger());
 
-export const route = app.route('/auth', authApp);
+app.route('/api/student', studentApp);
+
+export const route = app.route('/api/auth', authApp);
 
 export type AppType = typeof route;
 export default app;

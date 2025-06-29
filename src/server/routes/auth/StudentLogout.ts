@@ -4,25 +4,25 @@ import { Hono } from 'hono';
 import { lucia } from '@/lib/auth/lucia';
 import { deleteCookie } from 'hono/cookie';
 import { sessions } from '@/server/db/schema';
-import { getSession } from '@/lib/auth/getSession';
 import { db } from '@/server/db';
 import { eq } from 'drizzle-orm';
 
 export const studentLogout = new Hono().post('/studentLogout', async (c) => {
     try {
-        const session = await getSession(c);
-        if (!session) {
+        const { sessionId } = await c.req.json();
+
+        if (!sessionId) {
             return c.json({ error: 'ログインセッションが存在しません', flg: false }, 401);
         }
 
         // セッションを無効化
-        await lucia.invalidateSession(session.id);
+        await lucia.invalidateSession(sessionId);
 
         // クッキーを削除
         deleteCookie(c, lucia.sessionCookieName);
 
         // セッションテーブルのフラグを無効化
-        await db.update(sessions).set({ isActive: false }).where(eq(sessions.id, session.id));
+        await db.update(sessions).set({ isActive: false }).where(eq(sessions.id, sessionId));
 
         return c.json({ message: 'ログアウトしました', flg: true });
     } catch (error) {

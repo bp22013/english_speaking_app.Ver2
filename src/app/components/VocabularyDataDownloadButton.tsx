@@ -11,11 +11,11 @@ import {
 import * as XLSX from 'xlsx';
 
 interface VocabularyItem {
-    id: number;
+    id: string;
     word: string;
-    meaning: string;
-    level: number;
-    addedAt: string;
+    meaning: string | null;
+    level: number | null;
+    addedAt: string | null;
 }
 
 interface Props {
@@ -25,12 +25,7 @@ interface Props {
 export const VocabularyDownloadButton = ({ data }: Props) => {
     const handleDownloadCSV = () => {
         const headers = ['単語', '意味', 'レベル', '追加日'];
-        const rows = data.map((item) => [
-            item.word,
-            item.meaning,
-            `レベル ${item.level}`,
-            item.addedAt,
-        ]);
+        const rows = data.map((item) => [item.word, item.meaning, ` ${item.level}`, item.addedAt]);
 
         const csvContent = [headers, ...rows]
             .map((row) => row.map((cell) => `"${cell}"`).join(','))
@@ -46,7 +41,7 @@ export const VocabularyDownloadButton = ({ data }: Props) => {
             data.map((item) => ({
                 単語: item.word,
                 意味: item.meaning,
-                レベル: `レベル ${item.level}`,
+                レベル: `${item.level}`,
                 追加日: item.addedAt,
             }))
         );

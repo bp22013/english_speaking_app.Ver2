@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,93 +37,60 @@ import {
 import { AdminNavigation } from '../../components/AdminNavigation';
 import { PageTransition, FadeIn, SoftFadeIn } from '../../components/page-transition';
 import { motion } from 'framer-motion';
+import dayjs from 'dayjs';
 import { speak } from '@/lib/WebSpeechApi';
 import { VocabularyDownloadButton } from '../../components/VocabularyDataDownloadButton';
 import Link from 'next/link';
+import { VocabularyRegisterDialog } from '../../components/VocabularyRegisterModal';
+import { client } from '@/lib/HonoClient';
+import Loading from '@/app/loading';
 
 // サンプル単語データ
 interface VocabularyItem {
-    id: number;
+    id: string;
     word: string;
-    meaning: string;
-    level: number; // 1-10のレベル
-    addedAt: string;
+    meaning: string | null;
+    level: number | null;
+    addedAt: string | null;
 }
-
-const sampleVocabulary: VocabularyItem[] = [
-    {
-        id: 1,
-        word: 'apple',
-        meaning: 'りんご',
-        level: 1,
-        addedAt: '2024年1月15日',
-    },
-    {
-        id: 2,
-        word: 'computer',
-        meaning: 'コンピューター',
-        level: 4,
-        addedAt: '2024年1月14日',
-    },
-    {
-        id: 3,
-        word: 'book',
-        meaning: '本',
-        level: 1,
-        addedAt: '2024年1月12日',
-    },
-    {
-        id: 4,
-        word: 'university',
-        meaning: '大学',
-        level: 5,
-        addedAt: '2024年1月10日',
-    },
-    {
-        id: 5,
-        word: 'algorithm',
-        meaning: 'アルゴリズム',
-        level: 8,
-        addedAt: '2024年1月8日',
-    },
-    {
-        id: 6,
-        word: 'sophisticated',
-        meaning: '洗練された',
-        level: 9,
-        addedAt: '2024年1月6日',
-    },
-    {
-        id: 7,
-        word: 'cat',
-        meaning: '猫',
-        level: 1,
-        addedAt: '2024年1月5日',
-    },
-    {
-        id: 8,
-        word: 'phenomenal',
-        meaning: '驚異的な',
-        level: 10,
-        addedAt: '2024年1月3日',
-    },
-];
 
 export default function AdminVocabulary() {
     const [searchQuery, setSearchQuery] = useState('');
+    const [isLoading, setIsLoading] = useState<boolean>(false);
     const [selectedLevel, setSelectedLevel] = useState<string>('all');
     const [sortField, setSortField] = useState<string>('word');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [vocabulary, setVocabulary] = useState<VocabularyItem[]>(sampleVocabulary);
+    const [vocabulary, setVocabulary] = useState<VocabularyItem[]>([]);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedVocabId, setSelectedVocabId] = useState<number | null>(null);
+
+    useEffect(() => {
+        const fetchVocabulary = async () => {
+            setIsLoading(true);
+            try {
+                const res = await client.api.word.getWords.$get();
+                const data = await res.json();
+                if (data.flg) {
+                    setVocabulary(data.data);
+                } else {
+                    console.error('単語の取得に失敗しました:', data.message);
+                }
+            } catch (error) {
+                console.error('エラーが発生しました:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchVocabulary();
+    }, []);
 
     // フィルタリングと並び替え
     const filteredVocabulary = vocabulary
         .filter((item) => {
             const matchesSearch =
                 item.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                item.meaning.toLowerCase().includes(searchQuery.toLowerCase());
+                (item.meaning?.toLowerCase() ?? '').includes(searchQuery.toLowerCase());
             const matchesLevel = selectedLevel === 'all' || item.level === parseInt(selectedLevel);
             return matchesSearch && matchesLevel;
         })
@@ -134,14 +101,16 @@ export default function AdminVocabulary() {
                     : b.word.localeCompare(a.word);
             } else if (sortField === 'meaning') {
                 return sortDirection === 'asc'
-                    ? a.meaning.localeCompare(b.meaning)
-                    : b.meaning.localeCompare(a.meaning);
+                    ? (a.meaning ?? '').localeCompare(b.meaning ?? '')
+                    : (b.meaning ?? '').localeCompare(a.meaning ?? '');
             } else if (sortField === 'level') {
-                return sortDirection === 'asc' ? a.level - b.level : b.level - a.level;
+                return sortDirection === 'asc'
+                    ? (a.level ?? 0) - (b.level ?? 0)
+                    : (b.level ?? 0) - (a.level ?? 0);
             } else if (sortField === 'addedAt') {
                 return sortDirection === 'asc'
-                    ? new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()
-                    : new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
+                    ? new Date(a.addedAt ?? '').getTime() - new Date(b.addedAt ?? '').getTime()
+                    : new Date(b.addedAt ?? '').getTime() - new Date(a.addedAt ?? '').getTime();
             }
             return 0;
         });
@@ -157,7 +126,10 @@ export default function AdminVocabulary() {
 
     const handleDeleteVocab = () => {
         if (selectedVocabId !== null) {
-            setVocabulary(vocabulary.filter((item) => item.id !== selectedVocabId));
+            if (selectedVocabId !== null) {
+                setVocabulary(vocabulary.filter((item) => item.id !== String(selectedVocabId)));
+            }
+
             setIsDeleteDialogOpen(false);
             setSelectedVocabId(null);
         }
@@ -184,6 +156,10 @@ export default function AdminVocabulary() {
     const handleSpeak = (text: string) => {
         speak(text, 1);
     };
+
+    if (isLoading) {
+        return <Loading />;
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -219,16 +195,8 @@ export default function AdminVocabulary() {
                                     className="mt-4 md:mt-0"
                                 >
                                     <div className="space-x-5">
-                                        <VocabularyDownloadButton data={sampleVocabulary} />
-                                        <Button
-                                            asChild
-                                            className="bg-purple-600 hover:bg-purple-700"
-                                        >
-                                            <Link href="/admin/vocabulary/create">
-                                                <Plus className="mr-2 h-4 w-4" />
-                                                単語を追加
-                                            </Link>
-                                        </Button>
+                                        <VocabularyDownloadButton data={vocabulary} />
+                                        <VocabularyRegisterDialog />
                                     </div>
                                 </motion.div>
                             </div>
@@ -380,17 +348,23 @@ export default function AdminVocabulary() {
                                                             {item.meaning}
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <Badge
-                                                                variant="outline"
-                                                                className={getLevelColor(
-                                                                    item.level
-                                                                )}
-                                                            >
-                                                                {getLevelLabel(item.level)}
-                                                            </Badge>
+                                                            {item.level !== null && (
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className={getLevelColor(
+                                                                        item.level
+                                                                    )}
+                                                                >
+                                                                    {getLevelLabel(item.level)}
+                                                                </Badge>
+                                                            )}
                                                         </td>
                                                         <td className="px-4 py-4 text-gray-500 text-sm">
-                                                            {item.addedAt}
+                                                            {item.addedAt
+                                                                ? dayjs(item.addedAt).format(
+                                                                      'YYYY-MM-DD'
+                                                                  )
+                                                                : '未登録'}
                                                         </td>
                                                         <td className="px-4 py-4 text-right">
                                                             <DropdownMenu>
@@ -427,7 +401,7 @@ export default function AdminVocabulary() {
                                                                     <DropdownMenuItem
                                                                         onClick={() => {
                                                                             setSelectedVocabId(
-                                                                                item.id
+                                                                                parseInt(item.id)
                                                                             );
                                                                             setIsDeleteDialogOpen(
                                                                                 true

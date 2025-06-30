@@ -4,6 +4,7 @@
 
 import { Button } from '@/components/ui/button';
 import { useRouter, usePathname } from 'next/navigation';
+import { useAdminSession } from '../context/AdminAuthContext';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -27,6 +28,7 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const router = useRouter();
     const pathname = usePathname();
+    const { user } = useAdminSession();
 
     const navigationItems = [
         {
@@ -140,7 +142,9 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
                                     disabled={isLoading}
                                 >
                                     <div className="hidden sm:block text-left">
-                                        <p className="text-sm font-medium text-gray-900">管理者</p>
+                                        <p className="text-sm font-medium text-gray-900">
+                                            {user?.email}
+                                        </p>
                                         <p className="text-xs text-gray-500">システム管理者</p>
                                     </div>
                                 </Button>

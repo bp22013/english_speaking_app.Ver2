@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -44,6 +45,7 @@ import Link from 'next/link';
 import { VocabularyRegisterDialog } from '../../components/VocabularyRegisterModal';
 import { client } from '@/lib/HonoClient';
 import Loading from '@/app/loading';
+import toast from 'react-hot-toast';
 
 // サンプル単語データ
 interface VocabularyItem {
@@ -62,7 +64,9 @@ export default function AdminVocabulary() {
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [vocabulary, setVocabulary] = useState<VocabularyItem[]>([]);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [selectedVocabId, setSelectedVocabId] = useState<number | null>(null);
+    const [selectedVocabId, setSelectedVocabId] = useState<string | null>(null);
+    const selectedVocab = vocabulary.find((v) => v.id === String(selectedVocabId));
+    const router = useRouter();
 
     useEffect(() => {
         const fetchVocabulary = async () => {
@@ -124,7 +128,37 @@ export default function AdminVocabulary() {
         }
     };
 
+    // 単語を削除
     const handleDeleteVocab = () => {
+        setIsLoading(true);
+
+        toast.promise(
+            new Promise(async (resolve, reject) => {
+                try {
+                    const res = await client.api.word.deleteWords.$post({
+                        json: { id: selectedVocabId },
+                    });
+
+                    const data = await res.json();
+                    resolve(data.message);
+                    router.refresh();
+                    if (data.flg) {
+                    } else {
+                        reject(data.message);
+                    }
+                } catch (error) {
+                    console.log(error);
+                    reject(`不明なエラーが発生しました: ${error}`);
+                } finally {
+                    setIsLoading(false);
+                }
+            }),
+            {
+                loading: '削除中です...',
+                success: '削除しました!',
+                error: (message: string) => message,
+            }
+        );
         if (selectedVocabId !== null) {
             if (selectedVocabId !== null) {
                 setVocabulary(vocabulary.filter((item) => item.id !== String(selectedVocabId)));
@@ -401,7 +435,7 @@ export default function AdminVocabulary() {
                                                                     <DropdownMenuItem
                                                                         onClick={() => {
                                                                             setSelectedVocabId(
-                                                                                parseInt(item.id)
+                                                                                item.id
                                                                             );
                                                                             setIsDeleteDialogOpen(
                                                                                 true
@@ -429,15 +463,7 @@ export default function AdminVocabulary() {
                                                 <p className="mt-1 text-gray-500">
                                                     検索条件に一致する単語がありません。別の検索条件を試すか、新しい単語を追加してください。
                                                 </p>
-                                                <Button
-                                                    className="mt-4 bg-purple-600 hover:bg-purple-700"
-                                                    asChild
-                                                >
-                                                    <Link href="/admin/vocabulary/create">
-                                                        <Plus className="mr-2 h-4 w-4" />
-                                                        単語を追加
-                                                    </Link>
-                                                </Button>
+                                                <VocabularyRegisterDialog />
                                             </div>
                                         )}
                                     </div>
@@ -450,7 +476,7 @@ export default function AdminVocabulary() {
 
             {/* 削除確認ダイアログ */}
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-[40vw]">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Trash2 className="h-5 w-5 text-red-500" />
@@ -459,13 +485,30 @@ export default function AdminVocabulary() {
                         <DialogDescription>
                             この単語を削除してもよろしいですか？この操作は元に戻せません。
                         </DialogDescription>
+
+                        {selectedVocab && (
+                            <p className="mt-2 text-sm text-gray-800">
+                                <strong>対象単語：</strong>{' '}
+                                <span className="text-red-600 font-semibold">
+                                    {selectedVocab.word}
+                                </span>
+                            </p>
+                        )}
                     </DialogHeader>
-                    <DialogFooter className="gap-2 sm:gap-0">
-                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                    <DialogFooter className="space-x-4 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsDeleteDialogOpen(false)}
+                            className="cursor-pointer"
+                        >
                             <X className="mr-2 h-4 w-4" />
                             キャンセル
                         </Button>
-                        <Button variant="destructive" onClick={handleDeleteVocab}>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteVocab}
+                            className="cursor-pointer"
+                        >
                             <Trash2 className="mr-2 h-4 w-4" />
                             削除する
                         </Button>

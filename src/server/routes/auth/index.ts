@@ -1,3 +1,5 @@
+/* 認証機能統合用API */
+
 import { Hono } from 'hono';
 import { studentLogin } from './StudentLogin';
 import { studentRegister } from './StudentRegister';

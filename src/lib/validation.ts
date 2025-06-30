@@ -73,3 +73,13 @@ export const adminStudentRegisterValidation = z
     });
 
 export type adminStudentRegisterFormData = z.infer<typeof adminStudentRegisterValidation>;
+
+export const registerWordsValidation = z.object({
+    word: z.string().nonempty('単語を入力してください'),
+    meaning: z.string().nonempty('意味を入力してください'),
+    difficulty: z.enum(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], {
+        errorMap: () => ({ message: '難易度を選択してください' }),
+    }),
+});
+
+export type registerWordsDataForm = z.infer<typeof registerWordsValidation>;

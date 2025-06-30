@@ -61,6 +61,7 @@ export function VocabularyRegisterDialog() {
 
                     if (responceData.flg) {
                         resolve(responceData.message);
+                        window.location.reload();
                         setOpen(false);
                     } else {
                         reject(responceData.message);

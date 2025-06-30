@@ -1,3 +1,5 @@
+/* 単語のページ */
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -41,7 +43,7 @@ import { motion } from 'framer-motion';
 import dayjs from 'dayjs';
 import { speak } from '@/lib/WebSpeechApi';
 import { VocabularyDownloadButton } from '../../components/VocabularyDataDownloadButton';
-import Link from 'next/link';
+import { VocabularyActionsDropdown } from '@/app/components/VocabularyActionsDropdown';
 import { VocabularyRegisterDialog } from '../../components/VocabularyRegisterModal';
 import { client } from '@/lib/HonoClient';
 import Loading from '@/app/loading';
@@ -64,6 +66,7 @@ export default function AdminVocabulary() {
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [vocabulary, setVocabulary] = useState<VocabularyItem[]>([]);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedVocabId, setSelectedVocabId] = useState<string | null>(null);
     const selectedVocab = vocabulary.find((v) => v.id === String(selectedVocabId));
     const router = useRouter();
@@ -401,53 +404,19 @@ export default function AdminVocabulary() {
                                                                 : '未登録'}
                                                         </td>
                                                         <td className="px-4 py-4 text-right">
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger
-                                                                    asChild
-                                                                    className="cursor-pointer"
-                                                                >
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                    >
-                                                                        <MoreVertical className="h-4 w-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent
-                                                                    align="end"
-                                                                    className="cursor-pointer"
-                                                                >
-                                                                    <DropdownMenuLabel className="cursor-pointer">
-                                                                        アクション
-                                                                    </DropdownMenuLabel>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem
-                                                                        asChild
-                                                                        className="cursor-pointer"
-                                                                    >
-                                                                        <Link
-                                                                            href={`/admin/vocabulary/edit/${item.id}`}
-                                                                        >
-                                                                            <Edit className="mr-2 h-4 w-4" />
-                                                                            編集
-                                                                        </Link>
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem
-                                                                        onClick={() => {
-                                                                            setSelectedVocabId(
-                                                                                item.id
-                                                                            );
-                                                                            setIsDeleteDialogOpen(
-                                                                                true
-                                                                            );
-                                                                        }}
-                                                                        className="text-red-600 cursor-pointer"
-                                                                    >
-                                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                                        削除
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
+                                                            <VocabularyActionsDropdown
+                                                                wordId={item.id}
+                                                                word={item.word}
+                                                                meaning={item.meaning ?? ''}
+                                                                difficulty={item.level ?? 1}
+                                                                onDeleted={() => {
+                                                                    setVocabulary((prev) =>
+                                                                        prev.filter(
+                                                                            (v) => v.id !== item.id
+                                                                        )
+                                                                    );
+                                                                }}
+                                                            />
                                                         </td>
                                                     </motion.tr>
                                                 ))}
@@ -473,48 +442,6 @@ export default function AdminVocabulary() {
                     </div>
                 </main>
             </PageTransition>
-
-            {/* 削除確認ダイアログ */}
-            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogContent className="max-w-[40vw]">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <Trash2 className="h-5 w-5 text-red-500" />
-                            単語を削除
-                        </DialogTitle>
-                        <DialogDescription>
-                            この単語を削除してもよろしいですか？この操作は元に戻せません。
-                        </DialogDescription>
-
-                        {selectedVocab && (
-                            <p className="mt-2 text-sm text-gray-800">
-                                <strong>対象単語：</strong>{' '}
-                                <span className="text-red-600 font-semibold">
-                                    {selectedVocab.word}
-                                </span>
-                            </p>
-                        )}
-                    </DialogHeader>
-                    <DialogFooter className="space-x-4 sm:gap-0">
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsDeleteDialogOpen(false)}
-                            className="cursor-pointer"
-                        >
-                            <X className="mr-2 h-4 w-4" />
-                            キャンセル
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={handleDeleteVocab}
-                            className="cursor-pointer"
-                        >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            削除する
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }

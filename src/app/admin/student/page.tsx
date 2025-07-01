@@ -34,13 +34,10 @@ import {
     Edit,
     Trash2,
     Mail,
-    Phone,
     Calendar,
     BookOpen,
     Target,
     TrendingUp,
-    Clock,
-    Award,
     Eye,
     UserPlus,
     Upload,
@@ -57,10 +54,11 @@ import { StudentDataDownload } from '@/app/components/studentDataDownloadButton'
 import Loading from '@/app/loading';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { DeleteConfirmationModal } from '@/app/components/DeleteStudentConfirmModal';
 import { client } from '@/lib/HonoClient';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
+import { StudentActionDropdown } from '@/app/components/StudentActionDropdown';
+import { StudentEditModal } from '@/app/components/StudentEditModal';
 
 // 生徒データの型定義
 interface Student {
@@ -76,10 +74,6 @@ const grades = ['中学1年生', '中学2年生', '中学3年生', '高校1年�
 
 export default function AdminStudents() {
     const [students, setStudents] = useState<Student[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [targetStudent, setTargetStudent] = useState<{ studentId: string; name: string } | null>(
-        null
-    );
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedGrade, setSelectedGrade] = useState<string>('all');
@@ -87,7 +81,8 @@ export default function AdminStudents() {
     const [sortField, setSortField] = useState<string>('name');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-    const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [isDetailOpen, setIsDetailOpen] = useState<boolean>(false);
+    const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
 
     const router = useRouter();
 
@@ -164,18 +159,10 @@ export default function AdminStudents() {
         setIsDetailOpen(true);
     };
 
-    // 削除確認モーダルを開く
-    const handleViewDeleteConfirmModal = (studentId: string, name: string) => {
-        setTargetStudent({ studentId, name });
-        setIsModalOpen(true);
-    };
-
-    // モーダル確認後の処理
-    const handleConfirmDelete = () => {
-        if (targetStudent) {
-            handleDeleteStudent(targetStudent.studentId);
-            setIsModalOpen(false);
-        }
+    // 生徒の編集モーダルを開く
+    const handleEdit = (student: Student) => {
+        setSelectedStudent(student);
+        setIsEditOpen(true);
     };
 
     // 生徒を削除
@@ -193,7 +180,7 @@ export default function AdminStudents() {
 
                     if (data.flg) {
                         resolve(data.message);
-                        router.refresh();
+                        window.location.reload();
                     } else {
                         reject(data.message);
                     }
@@ -624,67 +611,23 @@ export default function AdminStudents() {
                                                                     </span>
                                                                 </td>
                                                                 <td className="px-4 py-4 text-right">
-                                                                    <DropdownMenu>
-                                                                        <DropdownMenuTrigger
-                                                                            asChild
-                                                                            className="cursor-pointer"
-                                                                        >
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                onClick={(e) =>
-                                                                                    e.stopPropagation()
-                                                                                }
-                                                                            >
-                                                                                <MoreVertical className="h-4 w-4" />
-                                                                            </Button>
-                                                                        </DropdownMenuTrigger>
-                                                                        <DropdownMenuContent align="end">
-                                                                            <DropdownMenuLabel>
-                                                                                アクション
-                                                                            </DropdownMenuLabel>
-                                                                            <DropdownMenuSeparator />
-                                                                            <DropdownMenuItem
-                                                                                onClick={() =>
-                                                                                    handleViewStudentDetails(
-                                                                                        student
-                                                                                    )
-                                                                                }
-                                                                                className="cursor-pointer"
-                                                                            >
-                                                                                <Eye className="mr-2 h-4 w-4" />
-                                                                                詳細を見る
-                                                                            </DropdownMenuItem>
-                                                                            <DropdownMenuItem className="cursor-pointer">
-                                                                                <Edit className="mr-2 h-4 w-4" />
-                                                                                編集
-                                                                            </DropdownMenuItem>
-                                                                            <DropdownMenuItem
-                                                                                className="cursor-pointer"
-                                                                                onClick={() =>
-                                                                                    router.push(
-                                                                                        `${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/messages`
-                                                                                    )
-                                                                                }
-                                                                            >
-                                                                                <Mail className="mr-2 h-4 w-4" />
-                                                                                メッセージ送信
-                                                                            </DropdownMenuItem>
-                                                                            <DropdownMenuSeparator />
-                                                                            <DropdownMenuItem
-                                                                                onClick={() =>
-                                                                                    handleViewDeleteConfirmModal(
-                                                                                        student.studentId,
-                                                                                        student.name
-                                                                                    )
-                                                                                }
-                                                                                className="text-red-600 hover:!bg-red-100 focus:!text-red-600 cursor-pointer focus:!bg-red-100"
-                                                                            >
-                                                                                <Trash2 className="mr-2 h-4 w-4 focus:!text-red-600" />
-                                                                                削除
-                                                                            </DropdownMenuItem>
-                                                                        </DropdownMenuContent>
-                                                                    </DropdownMenu>
+                                                                    <StudentActionDropdown
+                                                                        studentId={
+                                                                            student.studentId
+                                                                        }
+                                                                        studentName={student.name}
+                                                                        grade={student.grade}
+                                                                        onViewDetails={() =>
+                                                                            handleViewStudentDetails(
+                                                                                student
+                                                                            )
+                                                                        }
+                                                                        onDelete={() =>
+                                                                            handleDeleteStudent(
+                                                                                student.studentId
+                                                                            )
+                                                                        }
+                                                                    />
                                                                 </td>
                                                             </motion.tr>
                                                         );
@@ -752,15 +695,12 @@ export default function AdminStudents() {
                             </DialogHeader>
 
                             <Tabs defaultValue="overview" className="mt-4">
-                                <TabsList className="grid w-full grid-cols-3">
+                                <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="overview" className="cursor-pointer">
                                         概要
                                     </TabsTrigger>
                                     <TabsTrigger value="progress" className="cursor-pointer">
                                         学習進捗
-                                    </TabsTrigger>
-                                    <TabsTrigger value="contact" className="cursor-pointer">
-                                        連絡先
                                     </TabsTrigger>
                                 </TabsList>
 
@@ -822,6 +762,12 @@ export default function AdminStudents() {
                                         <div className="space-y-2">
                                             <h4 className="font-medium text-gray-900">基本情報</h4>
                                             <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-500">生徒ID:　</span>
+                                                    <span className="text-black">
+                                                        {selectedStudent.studentId}
+                                                    </span>
+                                                </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-gray-500">登録日:　</span>
                                                     <span>
@@ -890,47 +836,6 @@ export default function AdminStudents() {
                                             </div>
                                         </div>
                                     </div>
-                                </TabsContent>
-
-                                <TabsContent value="progress" className="space-y-4">
-                                    <div className="text-center">
-                                        <p className="text-gray-500">
-                                            詳細な学習進捗データは開発中です
-                                        </p>
-                                        <p className="text-sm text-gray-400 mt-1">
-                                            グラフやチャートによる可視化を予定しています
-                                        </p>
-                                    </div>
-                                </TabsContent>
-
-                                <TabsContent value="contact" className="space-y-4">
-                                    <div className="space-y-3">
-                                        <div className="flex items-center space-x-3">
-                                            <Mail className="w-5 h-5 text-gray-400" />
-                                            <div>
-                                                <p className="text-sm text-gray-500">生徒ID</p>
-                                                <p className="font-medium">
-                                                    {selectedStudent.studentId}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center space-x-3">
-                                            <Calendar className="w-5 h-5 text-gray-400" />
-                                            <div>
-                                                <p className="text-sm text-gray-500">登録日</p>
-                                                <p className="font-medium">
-                                                    <span>
-                                                        {selectedStudent.registeredAt
-                                                            ? dayjs(
-                                                                  selectedStudent.registeredAt
-                                                              ).format('YYYY/MM/DD HH:mm')
-                                                            : '不明'}
-                                                    </span>
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     <div className="pt-4 border-t border-gray-200">
                                         <div className="flex space-x-2">
                                             <Button
@@ -949,6 +854,7 @@ export default function AdminStudents() {
                                                 size="sm"
                                                 variant="outline"
                                                 className="cursor-pointer"
+                                                onClick={() => setIsEditOpen(true)}
                                             >
                                                 <Edit className="w-4 h-4 mr-2" />
                                                 編集
@@ -956,16 +862,28 @@ export default function AdminStudents() {
                                         </div>
                                     </div>
                                 </TabsContent>
+
+                                <TabsContent value="progress" className="space-y-4">
+                                    <div className="text-center">
+                                        <p className="text-gray-500">
+                                            詳細な学習進捗データは開発中です
+                                        </p>
+                                        <p className="text-sm text-gray-400 mt-1">
+                                            グラフやチャートによる可視化を予定しています
+                                        </p>
+                                    </div>
+                                </TabsContent>
                             </Tabs>
                         </>
                     )}
                 </DialogContent>
             </Dialog>
-            <DeleteConfirmationModal
-                open={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onConfirm={handleConfirmDelete}
-                studentName={targetStudent?.name || ''}
+            <StudentEditModal
+                open={isEditOpen}
+                onOpenChange={setIsEditOpen}
+                studentId={selectedStudent?.studentId as string}
+                studentName={selectedStudent?.name as string}
+                grade={selectedStudent?.grade as string}
             />
         </div>
     );

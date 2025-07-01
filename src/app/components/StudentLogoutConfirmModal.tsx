@@ -18,9 +18,10 @@ interface Props {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     sessionId: string;
+    studentId: string;
 }
 
-export const LogoutConfirmDialog = ({ open, onOpenChange, sessionId }: Props) => {
+export const LogoutConfirmDialog = ({ open, onOpenChange, sessionId, studentId }: Props) => {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
@@ -30,7 +31,7 @@ export const LogoutConfirmDialog = ({ open, onOpenChange, sessionId }: Props) =>
                 setIsLoading(true);
                 try {
                     const res = await client.api.auth.studentLogout.$post({
-                        json: { sessionId },
+                        json: { sessionId, studentId: studentId },
                         credentials: 'include',
                     });
 

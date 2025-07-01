@@ -32,7 +32,7 @@ export const studentWordStatus = pgTable('student_word_status', {
         .primaryKey()
         .$defaultFn(() => crypto.randomUUID()),
     studentId: text('student_id')
-        .references(() => students.id)
+        .references(() => students.studentId)
         .notNull(),
     wordId: text('word_id')
         .references(() => words.id)

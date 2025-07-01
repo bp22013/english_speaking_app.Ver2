@@ -60,7 +60,7 @@ CREATE TABLE "students" (
 	"student_id" text NOT NULL,
 	"name" text NOT NULL,
 	"password_hash" text NOT NULL,
-	"grade" integer,
+	"grade" text,
 	"registered_at" timestamp with time zone,
 	"last_login_at" timestamp with time zone,
 	CONSTRAINT "students_student_id_unique" UNIQUE("student_id")
@@ -88,5 +88,5 @@ ALTER TABLE "admin_messages" ADD CONSTRAINT "admin_messages_student_id_students_
 ALTER TABLE "messages" ADD CONSTRAINT "messages_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "messages" ADD CONSTRAINT "messages_sender_id_admins_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."admins"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "student_statistics" ADD CONSTRAINT "student_statistics_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "student_word_status" ADD CONSTRAINT "student_word_status_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "student_word_status" ADD CONSTRAINT "student_word_status_student_id_students_student_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("student_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "student_word_status" ADD CONSTRAINT "student_word_status_word_id_words_id_fk" FOREIGN KEY ("word_id") REFERENCES "public"."words"("id") ON DELETE no action ON UPDATE no action;

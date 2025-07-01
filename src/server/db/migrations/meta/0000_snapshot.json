@@ -1,5 +1,5 @@
 {
-  "id": "eeb58c2f-878e-4b0d-bb2b-e14117399687",
+  "id": "f3e7b85c-07a1-4869-b1b0-833d3a9d50c4",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -381,15 +381,15 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "student_word_status_student_id_students_id_fk": {
-          "name": "student_word_status_student_id_students_id_fk",
+        "student_word_status_student_id_students_student_id_fk": {
+          "name": "student_word_status_student_id_students_student_id_fk",
           "tableFrom": "student_word_status",
           "tableTo": "students",
           "columnsFrom": [
             "student_id"
           ],
           "columnsTo": [
-            "id"
+            "student_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -444,7 +444,7 @@
         },
         "grade": {
           "name": "grade",
-          "type": "integer",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },

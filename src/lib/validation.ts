@@ -74,6 +74,16 @@ export const adminStudentRegisterValidation = z
 
 export type adminStudentRegisterFormData = z.infer<typeof adminStudentRegisterValidation>;
 
+// 生徒の情報を更新する時のバリデーション
+export const updateStudentValidation = z.object({
+    name: z.string().nonempty('名前は必須です'),
+    grade: z.string().nonempty('学年は必須です'),
+    studentId: z.string().nonempty('学籍番号は必須です'),
+});
+
+export type updateStudentFormData = z.infer<typeof updateStudentValidation>;
+
+// 単語登録時のバリデーション
 export const registerWordsValidation = z.object({
     word: z.string().nonempty('単語を入力してください'),
     meaning: z.string().nonempty('意味を入力してください'),

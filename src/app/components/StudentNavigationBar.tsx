@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Badge from '@mui/material/Badge';
 import { Button } from '@/components/ui/button';
@@ -221,6 +221,7 @@ export function StudentNavigation() {
                 open={isModalOpen}
                 onOpenChange={setIsModalOpen}
                 sessionId={user?.sessionId as string}
+                studentId={user?.studentId as string}
             />
         </>
     );

@@ -36,7 +36,7 @@ export const RegisterWords = new Hono().post('/RegisterWords', async (c) => {
         // 各生徒に対して未回答状態のステータスを作成
         const statusEntries = allStudents.map((student) => ({
             id: crypto.randomUUID(),
-            studentId: student.id,
+            studentId: student.studentId,
             wordId: newWordId,
             isCorrect: null,
             answeredAt: null,

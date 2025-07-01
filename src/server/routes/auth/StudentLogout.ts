@@ -3,16 +3,19 @@
 import { Hono } from 'hono';
 import { lucia } from '@/server/lib/lucia';
 import { deleteCookie } from 'hono/cookie';
-import { sessions } from '@/server/db/schema';
+import { sessions, students } from '@/server/db/schema';
 import { db } from '@/server/db';
 import { eq } from 'drizzle-orm';
 
 export const studentLogout = new Hono().post('/studentLogout', async (c) => {
     try {
-        const { sessionId } = await c.req.json();
+        const { sessionId, studentId } = await c.req.json();
+        const now = new Date();
 
         if (!sessionId) {
             return c.json({ error: 'ログインセッションが存在しません', flg: false }, 401);
+        } else if (!studentId) {
+            return c.json({ error: '生徒IDを取得できませんでした', flg: false }, 401);
         }
 
         // セッションを無効化
@@ -23,6 +26,10 @@ export const studentLogout = new Hono().post('/studentLogout', async (c) => {
 
         // セッションテーブルのフラグを無効化
         await db.update(sessions).set({ isActive: false }).where(eq(sessions.id, sessionId));
+        await db
+            .update(students)
+            .set({ lastLoginAt: now })
+            .where(eq(students.studentId, studentId));
 
         return c.json({ message: 'ログアウトしました', flg: true });
     } catch (error) {

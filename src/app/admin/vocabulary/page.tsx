@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
+import { useWords } from '@/app/hooks/useWords';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
@@ -22,7 +22,6 @@ import { client } from '@/lib/HonoClient';
 import Loading from '@/app/loading';
 import toast from 'react-hot-toast';
 
-// サンプル単語データ
 interface VocabularyItem {
     id: string;
     word: string;
@@ -33,45 +32,24 @@ interface VocabularyItem {
 
 export default function AdminVocabulary() {
     const [searchQuery, setSearchQuery] = useState('');
-    const [isLoading, setIsLoading] = useState<boolean>(false);
     const [selectedLevel, setSelectedLevel] = useState<string>('all');
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [sortField, setSortField] = useState<string>('word');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [vocabulary, setVocabulary] = useState<VocabularyItem[]>([]);
     const [selectedVocabId, setSelectedVocabId] = useState<string | null>(null);
-    const router = useRouter();
-
-    useEffect(() => {
-        const fetchVocabulary = async () => {
-            setIsLoading(true);
-            try {
-                const res = await client.api.word.getWords.$get();
-                const data = await res.json();
-                if (data.flg) {
-                    setVocabulary(data.data);
-                } else {
-                    console.error('単語の取得に失敗しました:', data.message);
-                }
-            } catch (error) {
-                console.error('エラーが発生しました:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchVocabulary();
-    }, []);
+    const { words, isLoading, isError, refetch } = useWords();
 
     // フィルタリングと並び替え
-    const filteredVocabulary = vocabulary
-        .filter((item) => {
+    const filteredVocabulary = words
+        .filter((item: VocabularyItem) => {
             const matchesSearch =
                 item.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (item.meaning?.toLowerCase() ?? '').includes(searchQuery.toLowerCase());
+
             const matchesLevel = selectedLevel === 'all' || item.level === parseInt(selectedLevel);
             return matchesSearch && matchesLevel;
         })
-        .sort((a, b) => {
+        .sort((a: VocabularyItem, b: VocabularyItem) => {
             if (sortField === 'word') {
                 return sortDirection === 'asc'
                     ? a.word.localeCompare(b.word)
@@ -102,20 +80,21 @@ export default function AdminVocabulary() {
     };
 
     // 単語を削除
-    const handleDeleteVocab = () => {
-        setIsLoading(true);
+    const handleDeleteVocab = async (vocabId: string) => {
+        setIsSubmitting(true);
 
-        toast.promise(
+        await toast.promise(
             new Promise(async (resolve, reject) => {
                 try {
                     const res = await client.api.word.deleteWords.$post({
-                        json: { id: selectedVocabId },
+                        json: { id: vocabId },
                     });
 
                     const data = await res.json();
-                    resolve(data.message);
-                    router.refresh();
+
                     if (data.flg) {
+                        await refetch();
+                        resolve(data.message);
                     } else {
                         reject(data.message);
                     }
@@ -123,7 +102,7 @@ export default function AdminVocabulary() {
                     console.log(error);
                     reject(`不明なエラーが発生しました: ${error}`);
                 } finally {
-                    setIsLoading(false);
+                    setIsSubmitting(false);
                 }
             }),
             {
@@ -132,13 +111,6 @@ export default function AdminVocabulary() {
                 error: (message: string) => message,
             }
         );
-        if (selectedVocabId !== null) {
-            if (selectedVocabId !== null) {
-                setVocabulary(vocabulary.filter((item) => item.id !== String(selectedVocabId)));
-            }
-
-            setSelectedVocabId(null);
-        }
     };
 
     const getLevelColor = (level: number) => {
@@ -163,7 +135,7 @@ export default function AdminVocabulary() {
         speak(text, 1);
     };
 
-    if (isLoading) {
+    if (isLoading || isSubmitting) {
         return <Loading />;
     }
 
@@ -201,7 +173,7 @@ export default function AdminVocabulary() {
                                     className="mt-4 md:mt-0"
                                 >
                                     <div className="space-x-5">
-                                        <VocabularyDownloadButton data={vocabulary} />
+                                        <VocabularyDownloadButton data={words} />
                                         <VocabularyRegisterDialog />
                                     </div>
                                 </motion.div>
@@ -272,9 +244,11 @@ export default function AdminVocabulary() {
                                             <BookOpen className="w-5 h-5 text-purple-600" />
                                             <span>単語一覧</span>
                                         </CardTitle>
-                                        <p className="text-sm text-gray-500">
-                                            {filteredVocabulary.length} / {vocabulary.length} 件表示
-                                        </p>
+                                        <div className="text-sm text-gray-500">
+                                            <p className="text-sm text-gray-500">
+                                                {filteredVocabulary.length} / {words.length} 件表示
+                                            </p>
+                                        </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent>
@@ -324,7 +298,7 @@ export default function AdminVocabulary() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {filteredVocabulary.map((item) => (
+                                                {filteredVocabulary.map((item: VocabularyItem) => (
                                                     <motion.tr
                                                         key={item.id}
                                                         initial={{ opacity: 0 }}
@@ -378,13 +352,9 @@ export default function AdminVocabulary() {
                                                                 word={item.word}
                                                                 meaning={item.meaning ?? ''}
                                                                 difficulty={item.level ?? 1}
-                                                                onDeleted={() => {
-                                                                    setVocabulary((prev) =>
-                                                                        prev.filter(
-                                                                            (v) => v.id !== item.id
-                                                                        )
-                                                                    );
-                                                                }}
+                                                                onDeleted={() =>
+                                                                    handleDeleteVocab(item.id)
+                                                                }
                                                             />
                                                         </td>
                                                     </motion.tr>

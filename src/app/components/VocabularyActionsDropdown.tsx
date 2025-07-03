@@ -33,6 +33,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerWordsDataForm, registerWordsValidation } from '@/lib/validation';
 import toast from 'react-hot-toast';
+import { useWords } from '../hooks/useWords';
 import { client } from '@/lib/HonoClient';
 
 type Props = {
@@ -40,7 +41,7 @@ type Props = {
     word: string;
     meaning: string;
     difficulty: number;
-    onDeleted?: () => void;
+    onDeleted?: (id: string) => void;
 };
 
 export const VocabularyActionsDropdown = ({
@@ -53,12 +54,7 @@ export const VocabularyActionsDropdown = ({
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const defaultValues = {
-        word,
-        meaning,
-        difficulty: difficulty.toString() as `${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`,
-    };
+    const { refetch } = useWords();
 
     const {
         register,
@@ -67,7 +63,11 @@ export const VocabularyActionsDropdown = ({
         formState: { errors },
     } = useForm<registerWordsDataForm>({
         resolver: zodResolver(registerWordsValidation),
-        defaultValues,
+        defaultValues: {
+            word,
+            meaning,
+            difficulty: difficulty.toString() as `${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`,
+        },
     });
 
     const handleEdit = async (data: registerWordsDataForm) => {
@@ -86,8 +86,8 @@ export const VocabularyActionsDropdown = ({
                     const result = await res.json();
                     if (result.flg) {
                         resolve(result.message);
+                        await refetch();
                         setIsEditOpen(false);
-                        window.location.reload();
                     } else {
                         reject(result.message);
                     }
@@ -107,31 +107,12 @@ export const VocabularyActionsDropdown = ({
 
     const handleDelete = async () => {
         setIsSubmitting(true);
-        toast.promise(
-            new Promise(async (resolve, reject) => {
-                try {
-                    const res = await client.api.word.deleteWords.$post({ json: { id: wordId } });
-                    const data = await res.json();
-                    if (data.flg) {
-                        resolve(data.message);
-                        setIsDeleteOpen(false);
-                        onDeleted?.();
-                        window.location.reload();
-                    } else {
-                        reject(data.message);
-                    }
-                } catch (error) {
-                    reject(`不明なエラーが発生しました: ${error}`);
-                } finally {
-                    setIsSubmitting(false);
-                }
-            }),
-            {
-                loading: '削除中です...',
-                success: '削除しました！',
-                error: (msg) => msg,
-            }
-        );
+        try {
+            await onDeleted?.(wordId);
+            setIsDeleteOpen(false);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (

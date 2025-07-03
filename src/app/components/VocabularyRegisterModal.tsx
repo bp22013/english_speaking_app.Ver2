@@ -26,11 +26,14 @@ import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerWordsDataForm, registerWordsValidation } from '@/lib/validation';
 import toast from 'react-hot-toast';
+import { useWords } from '../hooks/useWords';
 import { client } from '@/lib/HonoClient';
+import Loading from '../loading';
 
 export function VocabularyRegisterDialog() {
     const [open, setOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { isLoading, refetch } = useWords();
 
     const {
         register,
@@ -47,6 +50,7 @@ export function VocabularyRegisterDialog() {
         },
     });
 
+    // 単語を登録する
     const handleRegister: SubmitHandler<registerWordsDataForm> = async (data) => {
         setIsSubmitting(true);
 
@@ -61,7 +65,7 @@ export function VocabularyRegisterDialog() {
 
                     if (responceData.flg) {
                         resolve(responceData.message);
-                        window.location.reload();
+                        await refetch();
                         setOpen(false);
                     } else {
                         reject(responceData.message);
@@ -79,6 +83,10 @@ export function VocabularyRegisterDialog() {
             }
         );
     };
+
+    if (isLoading) {
+        return <Loading />;
+    }
 
     return (
         <Dialog

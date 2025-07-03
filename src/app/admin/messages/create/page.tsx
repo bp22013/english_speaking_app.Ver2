@@ -4,7 +4,7 @@
 
 import type React from 'react';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,7 @@ import { AdminNavigation } from '../../../components/AdminNavigation';
 import { PageTransition, FadeIn, SoftFadeIn } from '../../../components/page-transition';
 import { motion } from 'framer-motion';
 import { useAdminSession } from '@/app/context/AdminAuthContext';
+import { useAdminMessagesContext } from '@/app/context/AdminMessagesContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStudents } from '@/app/hooks/useStudents';
@@ -57,12 +58,13 @@ import Loading from '@/app/loading';
 
 // 生徒データの型定義
 interface Student {
-    id: string;
+    studentId: string;
     name: string;
     grade: string;
-    studentId: string;
     avatar?: string;
-    lastActive: string;
+    lastLoginAt: string;
+    registeredAt: string;
+    isActive: boolean;
 }
 
 // メッセージタイプの定義
@@ -72,9 +74,16 @@ export default function AdminMessageCreate() {
     const router = useRouter();
     const { user } = useAdminSession();
     const { students, isLoading } = useStudents();
+    const { refetch } = useAdminMessagesContext();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+
+    console.log('✅ students in AdminMessageCreate:', students);
+
+    useEffect(() => {
+        console.log('🔍 AdminMessageCreate mounted');
+    }, []);
 
     // 学年の選択肢
     const grades = ['中学1年生', '中学2年生', '中学3年生', '高校1年生', '高校2年生', '高校3年生'];
@@ -111,7 +120,7 @@ export default function AdminMessageCreate() {
 
     // フィルタリングされた生徒リスト
     const filteredStudents = students.filter(
-        (student: Student) =>
+        (student: { name: string; grade: string }) =>
             student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             student.grade.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -135,13 +144,27 @@ export default function AdminMessageCreate() {
 
     const handleSelectAllStudents = () => {
         const current = getValues('selectedStudents') ?? [];
+
+        // student.studentIdを明示的にstringに変換
         const allStudentIds: string[] = filteredStudents.map((student: Student) =>
-            String(student.id)
+            String(student.studentId)
         );
-        const isAllSelected = current.length === allStudentIds.length;
-        const updated = isAllSelected ? [] : allStudentIds;
-        setValue('selectedStudents', updated);
+                
+        // 現在選択されている生徒IDがフィルターされた生徒の中にどれだけあるかを確認
+        const selectedInFiltered = current.filter(id => allStudentIds.includes(id));
+        const isAllSelected = selectedInFiltered.length === allStudentIds.length;
+        
+        if (isAllSelected) {
+            // 全選択解除: フィルターされた生徒のIDを除去
+            const updated = current.filter(id => !allStudentIds.includes(id));
+            setValue('selectedStudents', updated);
+        } else {
+            // 全選択: フィルターされた生徒のIDを追加（重複を避ける）
+            const updated = [...new Set([...current, ...allStudentIds])];
+            setValue('selectedStudents', updated);
+        }
     };
+    
 
     const onSubmit: SubmitHandler<sendMessageFromAdminFormData> = async (data) => {
         setIsSubmitting(true);
@@ -166,6 +189,7 @@ export default function AdminMessageCreate() {
 
                     if (responceData.flg) {
                         resolve(responceData.message);
+                        refetch(); // メッセージリストを更新
                         router.push('/admin/messages');
                     } else {
                         reject(responceData.message);
@@ -232,7 +256,7 @@ export default function AdminMessageCreate() {
         selectedGrades.forEach((grade) => {
             const gradeStudents = students.filter((student: Student) => student.grade === grade);
             gradeStudents.forEach((student: Student) => {
-                if (!selectedStudents.includes(String(student.id))) {
+                if (!selectedStudents.includes(String(student.studentId))) {
                     count++;
                 }
             });
@@ -244,7 +268,7 @@ export default function AdminMessageCreate() {
     const typeConfig = getMessageTypeConfig(type);
     const TypeIcon = typeConfig.icon;
 
-    if (isLoading) {
+    if (isLoading || students.length === 0) {
         return <Loading />;
     }
 
@@ -651,7 +675,7 @@ export default function AdminMessageCreate() {
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
-                                                                className="cursor-pointer"
+                                                                className='cursor-pointer'
                                                                 size="sm"
                                                                 onClick={handleSelectAllStudents}
                                                             >
@@ -676,52 +700,83 @@ export default function AdminMessageCreate() {
                                                         </div>
 
                                                         {/* 生徒リスト */}
-                                                        <div className="max-h-64 overflow-y-auto space-y-2">
+                                                        <div className={`max-h-64 ${!sendToAll ? 'overflow-y-auto' : ''} space-y-2`}>
                                                             {filteredStudents.map(
-                                                                (student: Student) => (
-                                                                    <motion.div
-                                                                        key={student.studentId}
-                                                                        initial={{ opacity: 0 }}
-                                                                        animate={{ opacity: 1 }}
-                                                                        className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50"
-                                                                    >
-                                                                        <Checkbox
-                                                                            id={`student-${student.id}`}
-                                                                            checked={selectedStudents.includes(
-                                                                                String(student.id)
-                                                                            )}
-                                                                            onCheckedChange={() =>
-                                                                                handleStudentToggle(
+                                                                (
+                                                                    student: Student,
+                                                                    index: number
+                                                                ) => {
+                                                                    const safeKey = student.studentId
+                                                                        ? String(student.studentId)
+                                                                        : `fallback-${index}`;
+
+                                                                    // 🔍 ここでログを出すことで、実行されているか確認できます
+                                                                    console.log(
+                                                                        'student.studentId:',
+                                                                        student.studentId,
+                                                                        'safeKey:',
+                                                                        safeKey
+                                                                    );
+                                                                    console.log(
+                                                                        'selectedStudents:',
+                                                                        selectedStudents
+                                                                    );
+
+                                                                    return (
+                                                                        <motion.div
+                                                                            key={safeKey}
+                                                                            initial={{ opacity: 0 }}
+                                                                            animate={{ opacity: 1 }}
+                                                                            className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50"
+                                                                        >
+                                                                            <Checkbox
+                                                                                id={`student-${student.studentId}`}
+                                                                                checked={selectedStudents.includes(
                                                                                     String(
-                                                                                        student.id
+                                                                                        student.studentId
                                                                                     )
-                                                                                )
-                                                                            }
-                                                                        />
-                                                                        <Avatar className="w-6 h-6">
-                                                                            <AvatarImage
-                                                                                src={
-                                                                                    student.avatar ||
-                                                                                    '/placeholder.svg'
-                                                                                }
-                                                                                alt={student.name}
-                                                                            />
-                                                                            <AvatarFallback className="text-xs">
-                                                                                {student.name.charAt(
-                                                                                    0
                                                                                 )}
-                                                                            </AvatarFallback>
-                                                                        </Avatar>
-                                                                        <div className="flex-1 min-w-0">
-                                                                            <p className="text-sm font-medium text-gray-900 truncate">
-                                                                                {student.name}
-                                                                            </p>
-                                                                            <p className="text-xs text-gray-500">
-                                                                                {student.grade}
-                                                                            </p>
-                                                                        </div>
-                                                                    </motion.div>
-                                                                )
+                                                                                onCheckedChange={() =>
+                                                                                    handleStudentToggle(
+                                                                                        String(
+                                                                                            student.studentId
+                                                                                        )
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                            <Avatar className="w-6 h-6">
+                                                                                <AvatarImage
+                                                                                    src={
+                                                                                        student.avatar ||
+                                                                                        '/placeholder.svg'
+                                                                                    }
+                                                                                    alt={
+                                                                                        typeof student.name ===
+                                                                                        'string'
+                                                                                            ? student.name
+                                                                                            : 'Student'
+                                                                                    }
+                                                                                />
+                                                                                <AvatarFallback className="text-xs">
+                                                                                    {typeof student.name ===
+                                                                                    'string'
+                                                                                        ? student.name.charAt(
+                                                                                              0
+                                                                                          )
+                                                                                        : '学'}
+                                                                                </AvatarFallback>
+                                                                            </Avatar>
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <p className="text-sm font-medium text-gray-900 truncate">
+                                                                                    {student.name}
+                                                                                </p>
+                                                                                <p className="text-xs text-gray-500">
+                                                                                    {student.grade}
+                                                                                </p>
+                                                                            </div>
+                                                                        </motion.div>
+                                                                    );
+                                                                }
                                                             )}
                                                         </div>
                                                     </div>

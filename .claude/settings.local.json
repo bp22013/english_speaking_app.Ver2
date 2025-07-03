@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ide__getDiagnostics",
+      "Bash(rg:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx next:*)",
+      "Bash(npx tsc:*)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(bun install:*)",
+      "Bash(npm install)"
+    ],
+    "deny": []
+  }
+}

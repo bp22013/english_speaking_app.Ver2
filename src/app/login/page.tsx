@@ -26,6 +26,7 @@ import {
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { client } from '@/lib/HonoClient';
+import { mutate } from 'swr';
 import {
     studentLoginValidation,
     StudentLoginFormData,
@@ -100,6 +101,7 @@ export default function LoginPage() {
 
                     if (responseData.flg) {
                         resolve(responseData.message);
+                        await mutate('/api/auth/getStudentInfo');
                         router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/student/dashboard`);
                     } else {
                         reject(responseData.error);

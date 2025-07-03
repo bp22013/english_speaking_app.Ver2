@@ -11,7 +11,7 @@ import messageApp from './routes/messages';
 const app = new Hono();
 
 app.use('*', cors());
-app.use(csrf());
+// app.use(csrf()); // 一時的にCSRFを無効化
 app.use(logger());
 
 export const route = app

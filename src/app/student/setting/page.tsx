@@ -23,12 +23,6 @@ import { motion } from 'framer-motion';
 import Loading from '@/app/loading';
 
 export default function SettingsPage() {
-    const [notifications, setNotifications] = useState({
-        dailyReminder: true,
-        weeklyReport: true,
-        achievements: true,
-        newFeatures: false,
-    });
     const { loading } = useAuth();
 
     const [profile, setProfile] = useState({

@@ -93,3 +93,17 @@ export const registerWordsValidation = z.object({
 });
 
 export type registerWordsDataForm = z.infer<typeof registerWordsValidation>;
+
+// 管理者から生徒にメッセージを送信する時のバリデーション
+export const sendMessageFromAdminValidation = z.object({
+    type: z.enum(['announcement', 'personal', 'reminder']),
+    title: z.string().nonempty('タイトルは必須です'),
+    content: z.string().nonempty('内容は必須です').max(1000, '内容は1000字までです'),
+    priority: z.enum(['low', 'medium', 'high']),
+    scheduledAt: z.string().optional(), // ISO形式
+    sendToAll: z.boolean(),
+    selectedStudents: z.array(z.string()).optional(),
+    selectedGrades: z.array(z.string()).optional(),
+});
+
+export type sendMessageFromAdminFormData = z.infer<typeof sendMessageFromAdminValidation>;

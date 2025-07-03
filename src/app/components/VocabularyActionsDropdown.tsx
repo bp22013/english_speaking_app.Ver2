@@ -1,3 +1,5 @@
+/* 管理者の単語欄のアクションドロップダウンコンポーネント */
+
 'use client';
 
 import { useState } from 'react';

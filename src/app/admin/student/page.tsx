@@ -8,15 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     Dialog,
     DialogContent,
@@ -30,15 +21,11 @@ import {
     Users,
     Search,
     Filter,
-    MoreVertical,
     Edit,
-    Trash2,
     Mail,
-    Calendar,
     BookOpen,
     Target,
     TrendingUp,
-    Eye,
     UserPlus,
     Upload,
     ArrowUpDown,
@@ -54,6 +41,7 @@ import { StudentDataDownload } from '@/app/components/studentDataDownloadButton'
 import Loading from '@/app/loading';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { useStudents } from '@/app/hooks/useStudents';
 import { client } from '@/lib/HonoClient';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
@@ -73,8 +61,6 @@ interface Student {
 const grades = ['中学1年生', '中学2年生', '中学3年生', '高校1年生', '高校2年生', '高校3年生'];
 
 export default function AdminStudents() {
-    const [students, setStudents] = useState<Student[]>([]);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedGrade, setSelectedGrade] = useState<string>('all');
     const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -83,35 +69,19 @@ export default function AdminStudents() {
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState<boolean>(false);
     const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
-
+    const { students, isLoading, isError } = useStudents();
     const router = useRouter();
 
-    // 生徒情報を取得
     useEffect(() => {
-        const fetchStudents = async () => {
-            try {
-                setIsLoading(true);
-                const res = await client.api.auth.getStudentInfo.$get();
-
-                if (res.ok) {
-                    const data = await res.json();
-                    setStudents(data.sessions);
-                } else {
-                }
-            } catch (error) {
-                toast.error('生徒情報を取得できませんでした');
-                router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/dashboard`);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchStudents();
-    }, []);
+        if (isError) {
+            toast.error('生徒情報を取得できませんでした');
+            router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/dashboard`);
+        }
+    }, [isError]);
 
     // フィルタリングと並び替え
     const filteredStudents = students
-        .filter((student) => {
+        .filter((student: { name: string; studentId: string; grade: string; isActive: any }) => {
             const matchesSearch =
                 student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 student.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -124,24 +94,29 @@ export default function AdminStudents() {
 
             return matchesSearch && matchesGrade && matchesStatus;
         })
-        .sort((a, b) => {
-            if (sortField === 'name') {
-                return sortDirection === 'asc'
-                    ? a.name.localeCompare(b.name)
-                    : b.name.localeCompare(a.name);
+        .sort(
+            (
+                a: { name: string; lastLoginAt: string | number | Date },
+                b: { name: string; lastLoginAt: string | number | Date }
+            ) => {
+                if (sortField === 'name') {
+                    return sortDirection === 'asc'
+                        ? a.name.localeCompare(b.name)
+                        : b.name.localeCompare(a.name);
+                }
+                // if (sortField === 'progress') {
+                //     return sortDirection === 'asc'
+                //         ? a.progress.totalWords - b.progress.totalWords
+                //         : b.progress.totalWords - a.progress.totalWords;
+                // }
+                else if (sortField === 'lastActive') {
+                    const aTime = a.lastLoginAt ? new Date(a.lastLoginAt).getTime() : 0;
+                    const bTime = b.lastLoginAt ? new Date(b.lastLoginAt).getTime() : 0;
+                    return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
+                }
+                return 0;
             }
-            // if (sortField === 'progress') {
-            //     return sortDirection === 'asc'
-            //         ? a.progress.totalWords - b.progress.totalWords
-            //         : b.progress.totalWords - a.progress.totalWords;
-            // }
-            else if (sortField === 'lastActive') {
-                const aTime = a.lastLoginAt ? new Date(a.lastLoginAt).getTime() : 0;
-                const bTime = b.lastLoginAt ? new Date(b.lastLoginAt).getTime() : 0;
-                return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
-            }
-            return 0;
-        });
+        );
 
     // Selectの情報をソート
     const handleSort = (field: string) => {
@@ -167,8 +142,6 @@ export default function AdminStudents() {
 
     // 生徒を削除
     const handleDeleteStudent = async (studentId: string) => {
-        setIsLoading(true);
-
         toast.promise(
             new Promise(async (resolve, reject) => {
                 try {
@@ -186,8 +159,6 @@ export default function AdminStudents() {
                     }
                 } catch (error) {
                     reject(`不明なエラーが発生しました: ${error}`);
-                } finally {
-                    setIsLoading(false);
                 }
             }),
             {
@@ -290,7 +261,9 @@ export default function AdminStudents() {
                                     {
                                         title: 'アクティブ',
                                         value: students
-                                            .filter((s) => s.isActive === true)
+                                            .filter(
+                                                (s: { isActive: boolean }) => s.isActive === true
+                                            )
                                             .length.toString(),
                                         icon: Target,
                                         color: 'green',
@@ -509,7 +482,7 @@ export default function AdminStudents() {
                                             </thead>
                                             <tbody>
                                                 <AnimatePresence>
-                                                    {filteredStudents.map((student) => {
+                                                    {filteredStudents.map((student: Student) => {
                                                         const statusConfig = getStatusConfig(
                                                             student.isActive
                                                         );

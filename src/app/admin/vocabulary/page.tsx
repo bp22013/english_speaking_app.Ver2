@@ -8,35 +8,8 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
-import {
-    BookOpen,
-    Search,
-    Filter,
-    Plus,
-    MoreVertical,
-    Edit,
-    Trash2,
-    Volume2,
-    ArrowUpDown,
-    X,
-} from 'lucide-react';
+import { BookOpen, Search, Filter, Volume2, ArrowUpDown } from 'lucide-react';
 import { AdminNavigation } from '../../components/AdminNavigation';
 import { PageTransition, FadeIn, SoftFadeIn } from '../../components/page-transition';
 import { motion } from 'framer-motion';
@@ -65,10 +38,7 @@ export default function AdminVocabulary() {
     const [sortField, setSortField] = useState<string>('word');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [vocabulary, setVocabulary] = useState<VocabularyItem[]>([]);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedVocabId, setSelectedVocabId] = useState<string | null>(null);
-    const selectedVocab = vocabulary.find((v) => v.id === String(selectedVocabId));
     const router = useRouter();
 
     useEffect(() => {
@@ -167,7 +137,6 @@ export default function AdminVocabulary() {
                 setVocabulary(vocabulary.filter((item) => item.id !== String(selectedVocabId)));
             }
 
-            setIsDeleteDialogOpen(false);
             setSelectedVocabId(null);
         }
     };

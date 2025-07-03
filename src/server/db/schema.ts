@@ -83,6 +83,7 @@ export const messages = pgTable('messages', {
         .references(() => admins.id)
         .notNull(),
     messageType: text('message_type'),
+    messagePriority: text('message_priority'),
     content: text('content'),
     isRead: boolean('is_read'),
     sentAt: timestamp('sent_at', { withTimezone: true }),

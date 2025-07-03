@@ -1,3 +1,5 @@
+/* メッセージを作成するページ */
+
 'use client';
 
 import type React from 'react';
@@ -17,6 +19,9 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { useForm, SubmitHandler, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { sendMessageFromAdminValidation, sendMessageFromAdminFormData } from '@/lib/validation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     Dialog,
@@ -41,148 +46,143 @@ import {
 } from 'lucide-react';
 import { AdminNavigation } from '../../../components/AdminNavigation';
 import { PageTransition, FadeIn, SoftFadeIn } from '../../../components/page-transition';
-import { motion, px } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useAdminSession } from '@/app/context/AdminAuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useStudents } from '@/app/hooks/useStudents';
+import { client } from '@/lib/HonoClient';
+import toast from 'react-hot-toast';
+import Loading from '@/app/loading';
 
 // 生徒データの型定義
 interface Student {
-    id: number;
+    id: string;
     name: string;
     grade: string;
-    studentID: string;
+    studentId: string;
     avatar?: string;
     lastActive: string;
-    progress: number;
 }
 
 // メッセージタイプの定義
 type MessageType = 'announcement' | 'personal' | 'reminder';
 
-// サンプル生徒データ
-const sampleStudents: Student[] = [
-    {
-        id: 1,
-        name: '田中太郎',
-        grade: '高校2年生',
-        studentID: 'tanaka@example.com',
-        lastActive: '10分前',
-        progress: 78,
-    },
-    {
-        id: 2,
-        name: '佐藤花子',
-        grade: '高校1年生',
-        studentID: 'sato@example.com',
-        lastActive: '2時間前',
-        progress: 92,
-    },
-    {
-        id: 3,
-        name: '鈴木一郎',
-        grade: '中学3年生',
-        studentID: 'suzuki@example.com',
-        lastActive: '昨日',
-        progress: 45,
-    },
-    {
-        id: 4,
-        name: '山田美咲',
-        grade: '高校3年生',
-        studentID: 'yamada@example.com',
-        lastActive: '3時間前',
-        progress: 88,
-    },
-    {
-        id: 5,
-        name: '伊藤健太',
-        grade: '中学2年生',
-        studentID: 'ito@example.com',
-        lastActive: '1日前',
-        progress: 67,
-    },
-];
-
 export default function AdminMessageCreate() {
     const router = useRouter();
+    const { user } = useAdminSession();
+    const { students, isLoading } = useStudents();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const [formData, setFormData] = useState({
-        type: 'announcement' as MessageType,
-        title: '',
-        content: '',
-        priority: 'medium',
-        scheduledAt: '',
-        sendToAll: true,
-        selectedStudents: [] as number[],
-        selectedGrades: [] as string[],
-    });
-
     // 学年の選択肢
     const grades = ['中学1年生', '中学2年生', '中学3年生', '高校1年生', '高校2年生', '高校3年生'];
 
+    const {
+        control,
+        handleSubmit,
+        watch,
+        setValue,
+        getValues,
+        formState: { errors },
+    } = useForm<sendMessageFromAdminFormData>({
+        resolver: zodResolver(sendMessageFromAdminValidation),
+        defaultValues: {
+            type: 'announcement',
+            title: '',
+            content: '',
+            priority: 'medium',
+            scheduledAt: '',
+            sendToAll: true,
+            selectedStudents: [],
+            selectedGrades: [],
+        },
+    });
+
+    const type = watch('type');
+    const title = watch('title');
+    const content = watch('content');
+    const priority = watch('priority');
+    const scheduledAt = watch('scheduledAt');
+    const selectedStudents = watch('selectedStudents') ?? [];
+    const selectedGrades = watch('selectedGrades') ?? [];
+    const sendToAll = watch('sendToAll');
+
     // フィルタリングされた生徒リスト
-    const filteredStudents = sampleStudents.filter(
-        (student) =>
+    const filteredStudents = students.filter(
+        (student: Student) =>
             student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             student.grade.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleSelectChange = (name: string, value: string) => {
-        setFormData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleStudentToggle = (studentId: number) => {
-        setFormData((prev) => ({
-            ...prev,
-            selectedStudents: prev.selectedStudents.includes(studentId)
-                ? prev.selectedStudents.filter((id) => id !== studentId)
-                : [...prev.selectedStudents, studentId],
-        }));
+    const handleStudentToggle = (studentId: string) => {
+        const current = getValues('selectedStudents') ?? [];
+        const updated = current.includes(studentId)
+            ? current.filter((id) => id !== studentId)
+            : [...current, studentId];
+        setValue('selectedStudents', updated);
     };
 
     const handleGradeToggle = (grade: string) => {
-        setFormData((prev) => ({
-            ...prev,
-            selectedGrades: prev.selectedGrades.includes(grade)
-                ? prev.selectedGrades.filter((g) => g !== grade)
-                : [...prev.selectedGrades, grade],
-        }));
+        const current = getValues('selectedGrades') ?? [];
+        const updated = current.includes(grade)
+            ? current.filter((g) => g !== grade)
+            : [...current, grade];
+
+        setValue('selectedGrades', updated);
     };
 
     const handleSelectAllStudents = () => {
-        setFormData((prev) => ({
-            ...prev,
-            selectedStudents:
-                prev.selectedStudents.length === filteredStudents.length
-                    ? []
-                    : filteredStudents.map((student) => student.id),
-        }));
+        const current = getValues('selectedStudents') ?? [];
+        const allStudentIds: string[] = filteredStudents.map((student: Student) =>
+            String(student.id)
+        );
+        const isAllSelected = current.length === allStudentIds.length;
+        const updated = isAllSelected ? [] : allStudentIds;
+        setValue('selectedStudents', updated);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const onSubmit: SubmitHandler<sendMessageFromAdminFormData> = async (data) => {
         setIsSubmitting(true);
 
-        try {
-            // 実際のアプリではここでAPIリクエストを行う
-            await new Promise((resolve) => setTimeout(resolve, 1500));
-            console.log('Message sent:', formData);
+        toast.promise(
+            new Promise(async (resolve, reject) => {
+                try {
+                    const res = await client.api.messages.sendMessageFromAdmin.$post({
+                        json: {
+                            senderId: user?.id,
+                            content: data.content,
+                            messageType: data.type,
+                            messagePriority: data.priority,
+                            scheduledAt: data.scheduledAt,
+                            sendToAll: data.sendToAll,
+                            selectedStudents: data.selectedStudents,
+                            selectedGrades: data.selectedGrades,
+                        },
+                    });
 
-            // 成功したらメッセージ一覧ページに戻る
-            router.push('/admin/messages');
-        } catch (error) {
-            console.error('Error sending message:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
+                    const responceData = await res.json();
+
+                    if (responceData.flg) {
+                        resolve(responceData.message);
+                        router.push('/admin/messages');
+                    } else {
+                        reject(responceData.message);
+                    }
+                } catch (error) {
+                    console.log(error);
+                    reject(`不明なエラーが発生しました: ${error}`);
+                } finally {
+                    setIsSubmitting(false);
+                }
+            }),
+            {
+                loading: 'メッセージを送信しています...',
+                success: '送信しました!',
+                error: (message: string) => message,
+            }
+        );
     };
 
     const getMessageTypeConfig = (type: MessageType) => {
@@ -225,15 +225,14 @@ export default function AdminMessageCreate() {
     };
 
     const getRecipientCount = () => {
-        if (formData.sendToAll) return sampleStudents.length;
+        if (sendToAll) return students.length;
 
-        let count = formData.selectedStudents.length;
+        let count = selectedStudents.length;
 
-        // 学年選択による追加
-        formData.selectedGrades.forEach((grade) => {
-            const gradeStudents = sampleStudents.filter((student) => student.grade === grade);
-            gradeStudents.forEach((student) => {
-                if (!formData.selectedStudents.includes(student.id)) {
+        selectedGrades.forEach((grade) => {
+            const gradeStudents = students.filter((student: Student) => student.grade === grade);
+            gradeStudents.forEach((student: Student) => {
+                if (!selectedStudents.includes(String(student.id))) {
                     count++;
                 }
             });
@@ -242,11 +241,15 @@ export default function AdminMessageCreate() {
         return count;
     };
 
-    const typeConfig = getMessageTypeConfig(formData.type);
+    const typeConfig = getMessageTypeConfig(type);
     const TypeIcon = typeConfig.icon;
 
+    if (isLoading) {
+        return <Loading />;
+    }
+
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className={`min-h-screen bg-gray-50 ${sendToAll ? 'overflow-y-scroll' : ''}`}>
             <AdminNavigation currentPage="messages" />
             <PageTransition>
                 <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -320,13 +323,10 @@ export default function AdminMessageCreate() {
                                                             <Badge
                                                                 variant="outline"
                                                                 className={getPriorityColor(
-                                                                    formData.priority
+                                                                    priority
                                                                 )}
                                                             >
-                                                                優先度:{' '}
-                                                                {getPriorityLabel(
-                                                                    formData.priority
-                                                                )}
+                                                                優先度: {getPriorityLabel(priority)}
                                                             </Badge>
                                                         </div>
                                                         <span className="text-sm text-gray-500">
@@ -334,11 +334,10 @@ export default function AdminMessageCreate() {
                                                         </span>
                                                     </div>
                                                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                                        {formData.title ||
-                                                            'タイトルが入力されていません'}
+                                                        {title || 'タイトルが入力されていません'}
                                                     </h3>
                                                     <p className="text-gray-700 whitespace-pre-wrap">
-                                                        {formData.content ||
+                                                        {content ||
                                                             'メッセージ内容が入力されていません'}
                                                     </p>
                                                     <div className="mt-4 pt-3 border-t border-gray-200">
@@ -361,7 +360,7 @@ export default function AdminMessageCreate() {
                             {/* メッセージ作成フォーム */}
                             <div className="lg:col-span-2">
                                 <SoftFadeIn delay={0.2}>
-                                    <form onSubmit={handleSubmit}>
+                                    <form onSubmit={handleSubmit(onSubmit)}>
                                         <Card className="hover:shadow-lg transition-shadow duration-300">
                                             <CardHeader className="pb-4">
                                                 <CardTitle className="flex items-center space-x-2">
@@ -379,123 +378,149 @@ export default function AdminMessageCreate() {
                                                         <Label htmlFor="type">
                                                             メッセージタイプ
                                                         </Label>
-                                                        <Select
-                                                            value={formData.type}
-                                                            onValueChange={(value) =>
-                                                                handleSelectChange(
-                                                                    'type',
-                                                                    value as MessageType
-                                                                )
-                                                            }
-                                                        >
-                                                            <SelectTrigger className="cursor-pointer">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem
-                                                                    value="announcement"
-                                                                    className="cursor-pointer"
+                                                        <Controller
+                                                            name="type"
+                                                            control={control}
+                                                            render={({ field }) => (
+                                                                <Select
+                                                                    value={field.value}
+                                                                    onValueChange={field.onChange}
                                                                 >
-                                                                    <div className="flex items-center">
-                                                                        <Bell className="w-4 h-4 mr-2" />
-                                                                        お知らせ
-                                                                    </div>
-                                                                </SelectItem>
-                                                                <SelectItem
-                                                                    value="personal"
-                                                                    className="cursor-pointer"
-                                                                >
-                                                                    <div className="flex items-center">
-                                                                        <User className="w-4 h-4 mr-2" />
-                                                                        個人メッセージ
-                                                                    </div>
-                                                                </SelectItem>
-                                                                <SelectItem
-                                                                    value="reminder"
-                                                                    className="cursor-pointer"
-                                                                >
-                                                                    <div className="flex items-center">
-                                                                        <Clock className="w-4 h-4 mr-2" />
-                                                                        リマインダー
-                                                                    </div>
-                                                                </SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
+                                                                    <SelectTrigger className="cursor-pointer">
+                                                                        <SelectValue placeholder="メッセージタイプ" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem
+                                                                            value="announcement"
+                                                                            className="cursor-pointer"
+                                                                        >
+                                                                            <div className="flex items-center">
+                                                                                <Bell className="w-4 h-4 mr-2" />
+                                                                                お知らせ
+                                                                            </div>
+                                                                        </SelectItem>
+                                                                        <SelectItem
+                                                                            value="personal"
+                                                                            className="cursor-pointer"
+                                                                        >
+                                                                            <div className="flex items-center">
+                                                                                <User className="w-4 h-4 mr-2" />
+                                                                                個人メッセージ
+                                                                            </div>
+                                                                        </SelectItem>
+                                                                        <SelectItem
+                                                                            value="reminder"
+                                                                            className="cursor-pointer"
+                                                                        >
+                                                                            <div className="flex items-center">
+                                                                                <Clock className="w-4 h-4 mr-2" />
+                                                                                リマインダー
+                                                                            </div>
+                                                                        </SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )}
+                                                        />
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="priority">優先度</Label>
-                                                        <Select
-                                                            value={formData.priority}
-                                                            onValueChange={(value) =>
-                                                                handleSelectChange(
-                                                                    'priority',
-                                                                    value
-                                                                )
-                                                            }
-                                                        >
-                                                            <SelectTrigger className="cursor-pointer">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem
-                                                                    value="low"
-                                                                    className="cursor-pointer"
+                                                        <Controller
+                                                            name="priority"
+                                                            control={control}
+                                                            render={({ field }) => (
+                                                                <Select
+                                                                    value={field.value}
+                                                                    onValueChange={field.onChange}
                                                                 >
-                                                                    <div className="flex items-center">
-                                                                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-                                                                        低
-                                                                    </div>
-                                                                </SelectItem>
-                                                                <SelectItem
-                                                                    value="medium"
-                                                                    className="cursor-pointer"
-                                                                >
-                                                                    <div className="flex items-center">
-                                                                        <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2" />
-                                                                        中
-                                                                    </div>
-                                                                </SelectItem>
-                                                                <SelectItem
-                                                                    value="high"
-                                                                    className="cursor-pointer"
-                                                                >
-                                                                    <div className="flex items-center">
-                                                                        <div className="w-2 h-2 bg-red-500 rounded-full mr-2" />
-                                                                        高
-                                                                    </div>
-                                                                </SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
+                                                                    <SelectTrigger className="cursor-pointer">
+                                                                        <SelectValue placeholder="優先度を選択" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem
+                                                                            value="low"
+                                                                            className="cursor-pointer"
+                                                                        >
+                                                                            <div className="flex items-center">
+                                                                                <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+                                                                                低
+                                                                            </div>
+                                                                        </SelectItem>
+                                                                        <SelectItem
+                                                                            value="medium"
+                                                                            className="cursor-pointer"
+                                                                        >
+                                                                            <div className="flex items-center">
+                                                                                <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2" />
+                                                                                中
+                                                                            </div>
+                                                                        </SelectItem>
+                                                                        <SelectItem
+                                                                            value="high"
+                                                                            className="cursor-pointer"
+                                                                        >
+                                                                            <div className="flex items-center">
+                                                                                <div className="w-2 h-2 bg-red-500 rounded-full mr-2" />
+                                                                                高
+                                                                            </div>
+                                                                        </SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )}
+                                                        />
+                                                        {errors.priority && (
+                                                            <p className="text-sm text-red-500">
+                                                                {errors.priority.message}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
 
                                                 {/* タイトル */}
                                                 <div className="space-y-2">
                                                     <Label htmlFor="title">タイトル</Label>
-                                                    <Input
-                                                        id="title"
+                                                    <Controller
                                                         name="title"
-                                                        value={formData.title}
-                                                        onChange={handleChange}
-                                                        placeholder="メッセージのタイトルを入力"
-                                                        required
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <>
+                                                                <Input
+                                                                    {...field}
+                                                                    placeholder="メッセージのタイトルを入力"
+                                                                />
+                                                                {errors.title && (
+                                                                    <p className="text-sm text-red-500">
+                                                                        {errors.title.message}
+                                                                    </p>
+                                                                )}
+                                                            </>
+                                                        )}
                                                     />
                                                 </div>
 
                                                 {/* メッセージ内容 */}
                                                 <div className="space-y-2">
                                                     <Label htmlFor="content">メッセージ内容</Label>
-                                                    <Textarea
-                                                        id="content"
+                                                    <Controller
                                                         name="content"
-                                                        value={formData.content}
-                                                        onChange={handleChange}
-                                                        placeholder="メッセージの内容を入力してください..."
-                                                        rows={8}
-                                                        required
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <>
+                                                                <Textarea
+                                                                    {...field}
+                                                                    placeholder="メッセージ内容を入力してください..."
+                                                                    rows={6}
+                                                                />
+                                                                {errors.content && (
+                                                                    <p className="text-sm text-red-500">
+                                                                        {errors.content.message}
+                                                                    </p>
+                                                                )}
+                                                            </>
+                                                        )}
                                                     />
+
                                                     <p className="text-sm text-gray-500">
-                                                        {formData.content.length} / 1000 文字
+                                                        {content.length} / 1000 文字
                                                     </p>
                                                 </div>
 
@@ -504,17 +529,25 @@ export default function AdminMessageCreate() {
                                                     <Label htmlFor="scheduledAt">
                                                         送信予約 (オプション)
                                                     </Label>
-                                                    <Input
-                                                        id="scheduledAt"
+                                                    <Controller
                                                         name="scheduledAt"
-                                                        type="datetime-local"
-                                                        value={formData.scheduledAt}
-                                                        onChange={handleChange}
-                                                        min={new Date().toISOString().slice(0, 16)}
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <>
+                                                                <Input
+                                                                    {...field}
+                                                                    type="datetime-local"
+                                                                    min={new Date()
+                                                                        .toISOString()
+                                                                        .slice(0, 16)}
+                                                                />
+                                                                <p className="text-sm text-gray-500">
+                                                                    ※
+                                                                    指定しない場合は即座に送信されます
+                                                                </p>
+                                                            </>
+                                                        )}
                                                     />
-                                                    <p className="text-sm text-gray-500">
-                                                        ※ 指定しない場合は即座に送信されます
-                                                    </p>
                                                 </div>
 
                                                 {/* 送信ボタン */}
@@ -526,17 +559,13 @@ export default function AdminMessageCreate() {
                                                     </Button>
                                                     <Button
                                                         type="submit"
-                                                        disabled={
-                                                            isSubmitting ||
-                                                            !formData.title ||
-                                                            !formData.content
-                                                        }
-                                                        className="bg-purple-600 hover:bg-purple-700"
+                                                        disabled={isSubmitting}
+                                                        className="bg-purple-600 cursor-pointer hover:bg-purple-700"
                                                     >
                                                         <Send className="mr-2 h-4 w-4" />
                                                         {isSubmitting
                                                             ? '送信中...'
-                                                            : formData.scheduledAt
+                                                            : scheduledAt
                                                             ? '予約送信'
                                                             : '送信'}
                                                     </Button>
@@ -563,25 +592,24 @@ export default function AdminMessageCreate() {
                                         <CardContent className="space-y-4">
                                             {/* 全員に送信 */}
                                             <div className="flex items-center space-x-2">
-                                                <Checkbox
-                                                    id="sendToAll"
-                                                    checked={formData.sendToAll}
-                                                    onCheckedChange={(checked: boolean) =>
-                                                        setFormData((prev) => ({
-                                                            ...prev,
-                                                            sendToAll: checked as boolean,
-                                                        }))
-                                                    }
+                                                <Controller
+                                                    name="sendToAll"
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <div className="flex items-center space-x-2">
+                                                            <Checkbox
+                                                                checked={field.value}
+                                                                onCheckedChange={(checked) =>
+                                                                    field.onChange(!!checked)
+                                                                }
+                                                            />
+                                                            <Label>全生徒に送信</Label>
+                                                        </div>
+                                                    )}
                                                 />
-                                                <Label
-                                                    htmlFor="sendToAll"
-                                                    className="text-sm font-medium"
-                                                >
-                                                    全生徒に送信 ({sampleStudents.length}名)
-                                                </Label>
                                             </div>
 
-                                            {!formData.sendToAll && (
+                                            {!sendToAll && (
                                                 <div className="space-y-4">
                                                     {/* 学年選択 */}
                                                     <div>
@@ -596,7 +624,7 @@ export default function AdminMessageCreate() {
                                                                 >
                                                                     <Checkbox
                                                                         id={`grade-${grade}`}
-                                                                        checked={formData.selectedGrades.includes(
+                                                                        checked={selectedGrades.includes(
                                                                             grade
                                                                         )}
                                                                         onCheckedChange={() =>
@@ -623,11 +651,11 @@ export default function AdminMessageCreate() {
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
+                                                                className="cursor-pointer"
                                                                 size="sm"
                                                                 onClick={handleSelectAllStudents}
                                                             >
-                                                                {formData.selectedStudents
-                                                                    .length ===
+                                                                {selectedStudents.length ===
                                                                 filteredStudents.length
                                                                     ? '全選択解除'
                                                                     : '全選択'}
@@ -649,46 +677,52 @@ export default function AdminMessageCreate() {
 
                                                         {/* 生徒リスト */}
                                                         <div className="max-h-64 overflow-y-auto space-y-2">
-                                                            {filteredStudents.map((student) => (
-                                                                <motion.div
-                                                                    key={student.id}
-                                                                    initial={{ opacity: 0 }}
-                                                                    animate={{ opacity: 1 }}
-                                                                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50"
-                                                                >
-                                                                    <Checkbox
-                                                                        id={`student-${student.id}`}
-                                                                        checked={formData.selectedStudents.includes(
-                                                                            student.id
-                                                                        )}
-                                                                        onCheckedChange={() =>
-                                                                            handleStudentToggle(
-                                                                                student.id
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                    <Avatar className="w-6 h-6">
-                                                                        <AvatarImage
-                                                                            src={
-                                                                                student.avatar ||
-                                                                                '/placeholder.svg'
+                                                            {filteredStudents.map(
+                                                                (student: Student) => (
+                                                                    <motion.div
+                                                                        key={student.studentId}
+                                                                        initial={{ opacity: 0 }}
+                                                                        animate={{ opacity: 1 }}
+                                                                        className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50"
+                                                                    >
+                                                                        <Checkbox
+                                                                            id={`student-${student.id}`}
+                                                                            checked={selectedStudents.includes(
+                                                                                String(student.id)
+                                                                            )}
+                                                                            onCheckedChange={() =>
+                                                                                handleStudentToggle(
+                                                                                    String(
+                                                                                        student.id
+                                                                                    )
+                                                                                )
                                                                             }
-                                                                            alt={student.name}
                                                                         />
-                                                                        <AvatarFallback className="text-xs">
-                                                                            {student.name.charAt(0)}
-                                                                        </AvatarFallback>
-                                                                    </Avatar>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <p className="text-sm font-medium text-gray-900 truncate">
-                                                                            {student.name}
-                                                                        </p>
-                                                                        <p className="text-xs text-gray-500">
-                                                                            {student.grade}
-                                                                        </p>
-                                                                    </div>
-                                                                </motion.div>
-                                                            ))}
+                                                                        <Avatar className="w-6 h-6">
+                                                                            <AvatarImage
+                                                                                src={
+                                                                                    student.avatar ||
+                                                                                    '/placeholder.svg'
+                                                                                }
+                                                                                alt={student.name}
+                                                                            />
+                                                                            <AvatarFallback className="text-xs">
+                                                                                {student.name.charAt(
+                                                                                    0
+                                                                                )}
+                                                                            </AvatarFallback>
+                                                                        </Avatar>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <p className="text-sm font-medium text-gray-900 truncate">
+                                                                                {student.name}
+                                                                            </p>
+                                                                            <p className="text-xs text-gray-500">
+                                                                                {student.grade}
+                                                                            </p>
+                                                                        </div>
+                                                                    </motion.div>
+                                                                )
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -737,9 +771,9 @@ export default function AdminMessageCreate() {
                                                 <span className="text-gray-600">優先度:</span>
                                                 <Badge
                                                     variant="outline"
-                                                    className={getPriorityColor(formData.priority)}
+                                                    className={getPriorityColor(priority)}
                                                 >
-                                                    {getPriorityLabel(formData.priority)}
+                                                    {getPriorityLabel(priority)}
                                                 </Badge>
                                             </div>
                                             <div className="flex items-center justify-between text-sm">
@@ -748,18 +782,18 @@ export default function AdminMessageCreate() {
                                                     {getRecipientCount()}名
                                                 </span>
                                             </div>
-                                            {formData.scheduledAt && (
+                                            {scheduledAt && (
                                                 <div className="flex items-center justify-between text-sm">
                                                     <span className="text-gray-600">送信予定:</span>
                                                     <span className="font-medium">
-                                                        {new Date(
-                                                            formData.scheduledAt
-                                                        ).toLocaleString('ja-JP')}
+                                                        {new Date(scheduledAt).toLocaleString(
+                                                            'ja-JP'
+                                                        )}
                                                     </span>
                                                 </div>
                                             )}
 
-                                            {formData.scheduledAt && (
+                                            {scheduledAt && (
                                                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                                     <div className="flex items-center">
                                                         <AlertCircle className="w-4 h-4 text-yellow-600 mr-2" />

@@ -10,47 +10,50 @@ import {
     DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 
-// Student 型定義
-export interface Student {
-    studentId: string;
-    name: string;
-    grade: string | null;
-    lastLoginAt: string | null;
-    registeredAt: string | null;
-    isActive: boolean;
+interface DataExportDropdownProps {
+    data: any[];
+    filename: string;
+    sheetName: string;
+    className?: string;
+    disabled?: boolean;
 }
 
-// Props の型を明示
-interface StudentDataDownloadProps {
-    data: Student[];
-}
-
-export const StudentDataDownload = ({ data }: StudentDataDownloadProps) => {
+export const DataExportDropdown = ({ 
+    data, 
+    filename, 
+    sheetName, 
+    className = "",
+    disabled = false 
+}: DataExportDropdownProps) => {
     const handleDownload = (selectedFormat: 'csv' | 'xlsx') => {
         if (data.length === 0) return;
 
         if (selectedFormat === 'csv') {
+            // CSV形式でのエクスポート
             const headers = Object.keys(data[0]);
             const csv = [
                 headers.join(','),
                 ...data.map((row) =>
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     headers.map((field) => `"${(row as any)[field] ?? ''}"`).join(',')
                 ),
             ].join('\n');
 
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            // BOM付きUTF-8でエンコード（Excel対応）
+            const bom = '\uFEFF';
+            const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', 'students.csv');
+            link.setAttribute('download', `${filename}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         } else {
+            // Excel形式でのエクスポート
             const worksheet = XLSX.utils.json_to_sheet(data);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
+            XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
             const excelBuffer = XLSX.write(workbook, {
                 bookType: 'xlsx',
@@ -63,27 +66,39 @@ export const StudentDataDownload = ({ data }: StudentDataDownloadProps) => {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', 'students.xlsx');
+            link.setAttribute('download', `${filename}.xlsx`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
     };
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="cursor-pointer">
+                <Button 
+                    variant="outline" 
+                    className={`cursor-pointer ${className}`}
+                    disabled={disabled || data.length === 0}
+                    title={data.length === 0 ? 'エクスポートできるデータがありません' : ''}
+                >
                     <Download className="mr-2 h-4 w-4" />
-                    エクスポート
+                    エクスポート {data.length === 0 && '(データなし)'}
                     <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={() => handleDownload('csv')} className="cursor-pointer">
+                <DropdownMenuItem 
+                    onClick={() => handleDownload('csv')} 
+                    className="cursor-pointer"
+                >
                     CSV形式（.csv）でダウンロード
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleDownload('xlsx')} className="cursor-pointer">
+                <DropdownMenuItem 
+                    onClick={() => handleDownload('xlsx')} 
+                    className="cursor-pointer"
+                >
                     Excel形式（.xlsx）でダウンロード
                 </DropdownMenuItem>
             </DropdownMenuContent>

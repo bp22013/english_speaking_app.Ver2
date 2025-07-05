@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useState } from 'react';
-import { mutate } from 'swr';
 import { client } from '@/lib/HonoClient';
 
 interface Props {
@@ -40,7 +39,6 @@ export const LogoutConfirmDialog = ({ open, onOpenChange, sessionId, studentId }
 
                     if (data.flg) {
                         resolve(data.message);
-                        mutate('/api/auth/getStudentInfo');
                         router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/`);
                     } else {
                         reject(data.error || 'ログアウトに失敗しました');

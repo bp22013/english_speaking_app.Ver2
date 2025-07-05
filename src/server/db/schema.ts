@@ -48,7 +48,7 @@ export const studentStatistics = pgTable('student_statistics', {
         .primaryKey()
         .$defaultFn(() => crypto.randomUUID()),
     studentId: text('student_id')
-        .references(() => students.studentId)
+        .references(() => students.id)
         .notNull(),
     totalStudyTime: integer('total_study_time'),
     weeklyStudyTime: integer('weekly_study_time'),
@@ -76,13 +76,12 @@ export const messages = pgTable('messages', {
     id: text('id')
         .primaryKey()
         .$defaultFn(() => crypto.randomUUID()),
-
     studentId: text('student_id')
-        .references(() => students.studentId)
+        .references(() => students.id)
         .notNull(),
-
-    senderId: text('sender_id').notNull(),
-
+    senderId: text('sender_id')
+        .references(() => admins.id)
+        .notNull(),
     messageType: text('message_type'),
     messagePriority: text('message_priority'),
     content: text('content'),
@@ -96,9 +95,11 @@ export const adminMessages = pgTable('admin_messages', {
     id: text('id')
         .primaryKey()
         .$defaultFn(() => crypto.randomUUID()),
-    adminId: text('admin_id').notNull(),
+    adminId: text('admin_id')
+        .references(() => admins.id)
+        .notNull(),
     studentId: text('student_id')
-        .references(() => students.studentId)
+        .references(() => students.id)
         .notNull(),
     content: text('content'),
     sentAt: timestamp('sent_at', { withTimezone: true }),

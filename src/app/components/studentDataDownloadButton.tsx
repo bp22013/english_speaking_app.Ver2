@@ -34,7 +34,6 @@ export const StudentDataDownload = ({ data }: StudentDataDownloadProps) => {
             const csv = [
                 headers.join(','),
                 ...data.map((row) =>
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     headers.map((field) => `"${(row as any)[field] ?? ''}"`).join(',')
                 ),
             ].join('\n');

@@ -15,7 +15,7 @@ export const sendMessageFromAdmin = new Hono().post('/sendMessageFromAdmin', asy
             messagePriority,
             scheduledAt,
             sendToAll,
-            selectedStudents = [],
+            selectedStudentIds = [],
             selectedGrades = [],
         } = await c.req.json();
 
@@ -23,27 +23,27 @@ export const sendMessageFromAdmin = new Hono().post('/sendMessageFromAdmin', asy
         let targetStudentIds: string[] = [];
 
         if (sendToAll) {
-            const allStudents = await db.select({ studentId: students.studentId }).from(students);
-            targetStudentIds = allStudents.map((s) => s.studentId);
+            const allStudents = await db.select({ id: students.id }).from(students);
+            targetStudentIds = allStudents.map((s) => s.id);
         } else {
             const studentsByGrade = selectedGrades.length
                 ? await db
-                      .select({ studentId: students.studentId })
+                      .select({ id: students.id })
                       .from(students)
                       .where(inArray(students.grade, selectedGrades))
                 : [];
 
-            const studentsById = selectedStudents.length
+            const studentsById = selectedStudentIds.length
                 ? await db
-                      .select({ studentId: students.studentId })
+                      .select({ id: students.id })
                       .from(students)
-                      .where(inArray(students.studentId, selectedStudents))
+                      .where(inArray(students.id, selectedStudentIds))
                 : [];
 
             const combined = [...studentsByGrade, ...studentsById];
 
             // 重複除外
-            targetStudentIds = Array.from(new Set(combined.map((s) => s.studentId)));
+            targetStudentIds = Array.from(new Set(combined.map((s) => s.id)));
         }
 
         if (targetStudentIds.length === 0) {

@@ -88,7 +88,7 @@ export default function AdminDashboard() {
                                     className="mt-4 md:mt-0 flex space-x-3"
                                 >
                                     <Button asChild className="bg-purple-600 hover:bg-purple-700">
-                                        <Link href="/admin/vocabulary">
+                                        <Link href="/admin/vocabulary/create">
                                             <Plus className="mr-2 h-4 w-4" />
                                             単語を追加
                                         </Link>

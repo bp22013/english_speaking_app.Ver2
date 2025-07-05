@@ -140,7 +140,7 @@ export default function AdminVocabulary() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 overflow-y-scroll">
+        <div className="min-h-screen bg-gray-50">
             <AdminNavigation currentPage="vocabulary" />
             <PageTransition>
                 <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

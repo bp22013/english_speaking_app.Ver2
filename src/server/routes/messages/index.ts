@@ -2,14 +2,7 @@
 
 import { Hono } from 'hono';
 import { sendMessageFromAdmin } from './sendMessageFromAdmin';
-import { getAdminMessages } from './getAdminMessages';
-import { deleteMessage } from './deleteMessage';
-import { updateMessage } from './updateMessage';
 
-const messageApp = new Hono()
-    .route('/', sendMessageFromAdmin)
-    .route('/', getAdminMessages)
-    .route('/', deleteMessage)
-    .route('/', updateMessage);
+const messageApp = new Hono().route('/', sendMessageFromAdmin);
 
 export default messageApp;

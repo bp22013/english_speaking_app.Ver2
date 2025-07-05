@@ -38,7 +38,6 @@ import {
     Users,
     User,
     Bell,
-    Award,
     Search,
     Clock,
     AlertCircle,
@@ -149,14 +148,14 @@ export default function AdminMessageCreate() {
         const allStudentIds: string[] = filteredStudents.map((student: Student) =>
             String(student.studentId)
         );
-                
+
         // 現在選択されている生徒IDがフィルターされた生徒の中にどれだけあるかを確認
-        const selectedInFiltered = current.filter(id => allStudentIds.includes(id));
+        const selectedInFiltered = current.filter((id) => allStudentIds.includes(id));
         const isAllSelected = selectedInFiltered.length === allStudentIds.length;
-        
+
         if (isAllSelected) {
             // 全選択解除: フィルターされた生徒のIDを除去
-            const updated = current.filter(id => !allStudentIds.includes(id));
+            const updated = current.filter((id) => !allStudentIds.includes(id));
             setValue('selectedStudents', updated);
         } else {
             // 全選択: フィルターされた生徒のIDを追加（重複を避ける）
@@ -164,7 +163,6 @@ export default function AdminMessageCreate() {
             setValue('selectedStudents', updated);
         }
     };
-    
 
     const onSubmit: SubmitHandler<sendMessageFromAdminFormData> = async (data) => {
         setIsSubmitting(true);
@@ -590,8 +588,8 @@ export default function AdminMessageCreate() {
                                                         {isSubmitting
                                                             ? '送信中...'
                                                             : scheduledAt
-                                                            ? '予約送信'
-                                                            : '送信'}
+                                                              ? '予約送信'
+                                                              : '送信'}
                                                     </Button>
                                                 </div>
                                             </CardContent>
@@ -675,7 +673,7 @@ export default function AdminMessageCreate() {
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
-                                                                className='cursor-pointer'
+                                                                className="cursor-pointer"
                                                                 size="sm"
                                                                 onClick={handleSelectAllStudents}
                                                             >
@@ -700,15 +698,20 @@ export default function AdminMessageCreate() {
                                                         </div>
 
                                                         {/* 生徒リスト */}
-                                                        <div className={`max-h-64 ${!sendToAll ? 'overflow-y-auto' : ''} space-y-2`}>
+                                                        <div
+                                                            className={`max-h-64 ${!sendToAll ? 'overflow-y-auto' : ''} space-y-2`}
+                                                        >
                                                             {filteredStudents.map(
                                                                 (
                                                                     student: Student,
                                                                     index: number
                                                                 ) => {
-                                                                    const safeKey = student.studentId
-                                                                        ? String(student.studentId)
-                                                                        : `fallback-${index}`;
+                                                                    const safeKey =
+                                                                        student.studentId
+                                                                            ? String(
+                                                                                  student.studentId
+                                                                              )
+                                                                            : `fallback-${index}`;
 
                                                                     // 🔍 ここでログを出すことで、実行されているか確認できます
                                                                     console.log(

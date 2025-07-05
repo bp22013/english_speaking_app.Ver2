@@ -16,31 +16,31 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/app/context/AuthContext';
 import Loading from '@/app/loading';
-import useSWR from 'swr';
-import { fetcher } from '@/lib/fetcher';
 
+const recentSessions = [
+    {
+        mode: '単語学習',
+        date: '2024年1月26日',
+        words: 20,
+        score: 85,
+    },
+    {
+        mode: 'リスニング',
+        date: '2024年1月25日',
+        words: 15,
+        score: 92,
+    },
+];
 
 export default function TrainingPage() {
     const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
     const [selectedReviewLevel, setSelectedReviewLevel] = useState<number | null>(null);
-    const { user, loading } = useAuth();
+    const { loading } = useAuth();
     const router = useRouter();
-    
-    // 学習統計データを取得
-    const { data: statsData, error: statsError } = useSWR(
-        user?.studentId ? `/api/training/getStudentStatistics?studentId=${user.studentId}` : null,
-        fetcher
-    );
-    
-    const stats = statsData?.data || {
-        totalStudyTime: 0,
-        accuracyRate: 0,
-        totalWordsLearned: 0
-    };
 
     const TransitionQuestionPage = () => {
         if (selectedLevel) {
-            router.push(`/student/question/?level=${selectedLevel}&mode=training`);
+            router.push(`/student/question/?level=${selectedLevel}`);
         } else {
             toast.error('レベルを選択してください');
         }
@@ -48,7 +48,7 @@ export default function TrainingPage() {
 
     const TransitionReviewPage = () => {
         if (selectedReviewLevel) {
-            router.push(`/student/question/?level=${selectedReviewLevel}&mode=review`);
+            router.push(`/student/review/?level=${selectedReviewLevel}`);
         } else {
             toast.error('レベルを選択してください');
         }
@@ -216,19 +216,19 @@ export default function TrainingPage() {
                                 {[
                                     {
                                         icon: Target,
-                                        value: `${stats.accuracyRate}%`,
+                                        value: '87%',
                                         label: '平均正答率',
                                         color: 'blue',
                                     },
                                     {
                                         icon: Star,
-                                        value: stats.totalWordsLearned.toLocaleString(),
+                                        value: '1,247',
                                         label: '学習済み単語',
                                         color: 'green',
                                     },
                                     {
                                         icon: Clock,
-                                        value: `${Math.floor(stats.totalStudyTime / 60)}h`,
+                                        value: '24h',
                                         label: '総学習時間',
                                         color: 'purple',
                                     },
@@ -265,68 +265,53 @@ export default function TrainingPage() {
                             </div>
                         </SoftFadeIn>
 
-                        {/* 学習レベル進捗状況 */}
+                        {/* 最近のセッション */}
                         <FadeIn delay={0.3}>
                             <Card className="hover:shadow-lg transition-shadow duration-300">
                                 <CardHeader>
-                                    <CardTitle>レベル別進捗状況</CardTitle>
+                                    <CardTitle>最近の学習履歴</CardTitle>
                                     <CardDescription>
-                                        各レベルの学習進捗と正答率を確認できます
+                                        過去の学習セッションの結果を確認できます
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
-                                        {stats.levelProgress && stats.levelProgress.length > 0 ? (
-                                            stats.levelProgress.map((level: any, index: number) => (
-                                                <motion.div
-                                                    key={level.level}
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    transition={{
-                                                        delay: 0.4 + index * 0.1,
-                                                        duration: 0.6,
-                                                    }}
-                                                    className="p-4 bg-gray-50 rounded-lg"
-                                                >
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <div className="flex items-center space-x-3">
-                                                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                                                <span className="text-sm font-semibold text-blue-600">
-                                                                    {level.level}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-medium">Level {level.level}</p>
-                                                                <p className="text-sm text-gray-600">
-                                                                    {level.answeredWords}/{level.totalWords} 単語学習済み
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <p className="text-lg font-bold text-gray-900">
-                                                                {level.accuracy}%
-                                                            </p>
-                                                            <p className="text-sm text-gray-600">正答率</p>
-                                                        </div>
+                                        {recentSessions.map((session, index) => (
+                                            <motion.div
+                                                key={index}
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                transition={{
+                                                    delay: 0.4 + index * 0.1,
+                                                    duration: 0.6,
+                                                }}
+                                                whileHover={{ scale: 1.01 }}
+                                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg cursor-pointer"
+                                            >
+                                                <div className="flex items-center space-x-4">
+                                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                        <BookOpen className="w-5 h-5 text-blue-600" />
                                                     </div>
-                                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                                        <div
-                                                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                                            style={{ width: `${level.progress}%` }}
-                                                        />
+                                                    <div>
+                                                        <p className="font-medium">
+                                                            {session.mode}
+                                                        </p>
+                                                        <p className="text-sm text-gray-600">
+                                                            {session.date} • {session.words}単語
+                                                        </p>
                                                     </div>
-                                                    <p className="text-xs text-gray-500 mt-1 text-right">
-                                                        進捗率: {level.progress}%
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-lg font-bold text-gray-900">
+                                                        {session.score}%
                                                     </p>
-                                                </motion.div>
-                                            ))
-                                        ) : (
-                                            <div className="text-center py-8">
-                                                <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                                <p className="text-gray-500">まだ学習データがありません</p>
-                                                <p className="text-sm text-gray-400">トレーニングを始めてみましょう！</p>
-                                            </div>
-                                        )}
+                                                    <Button variant="ghost" size="sm">
+                                                        <RotateCcw className="w-4 h-4 mr-1" />
+                                                        再挑戦
+                                                    </Button>
+                                                </div>
+                                            </motion.div>
+                                        ))}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -349,13 +334,10 @@ export default function TrainingPage() {
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <h3 className="font-semibold text-gray-900 mb-2">
-                                                    {stats.incorrectWords > 0 ? '弱点克服セッション' : '新しい単語に挑戦'}
+                                                    弱点克服セッション
                                                 </h3>
                                                 <p className="text-sm text-gray-600 mb-4">
-                                                    {stats.incorrectWords > 0 
-                                                        ? `過去の間違いから${Math.min(stats.incorrectWords, 20)}単語をピックアップしました`
-                                                        : '新しいレベルの単語に挑戦してみましょう'
-                                                    }
+                                                    過去の間違いから15単語をピックアップしました
                                                 </p>
                                                 <div className="flex items-center space-x-4 text-sm text-gray-600">
                                                     <div className="flex items-center space-x-1">
@@ -364,22 +346,11 @@ export default function TrainingPage() {
                                                     </div>
                                                     <div className="flex items-center space-x-1">
                                                         <Target className="w-4 h-4" />
-                                                        <span>{Math.min(stats.incorrectWords || 15, 20)}単語</span>
+                                                        <span>15単語</span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <Button 
-                                                className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
-                                                onClick={() => {
-                                                    if (stats.incorrectWords > 0) {
-                                                        // 間違えた単語がある場合は復習モード
-                                                        router.push('/student/question/?mode=review');
-                                                    } else {
-                                                        // 間違えた単語がない場合はレベル1から開始
-                                                        router.push('/student/question/?level=1&mode=training');
-                                                    }
-                                                }}
-                                            >
+                                            <Button className="bg-blue-600 hover:bg-blue-700">
                                                 開始する
                                                 <ArrowRight className="w-4 h-4 ml-2" />
                                             </Button>

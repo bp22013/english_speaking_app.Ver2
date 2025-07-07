@@ -22,7 +22,6 @@ import {
     Loader2,
     RotateCcw,
     Home,
-    Award,
     Clock,
     BookOpen,
     BarChart,
@@ -31,33 +30,27 @@ import { Badge } from '@/components/ui/badge';
 import { handleCanon } from '@/app/components/particle/happyCanon';
 import { useAuth } from '@/app/context/AuthContext';
 import Loading from '@/app/loading';
+import { fetcher } from '@/lib/fetcher';
+import { client } from '@/lib/HonoClient';
 
 // 問題データの型定義
 interface QuizItem {
-    id: number;
+    id: string;
     word: string;
     answer: string;
     hint?: string;
+    level?: number;
 }
 
 // ユーザーの回答記録の型定義
 interface UserAnswer {
-    quizId: number;
+    quizId: string;
     word: string;
     correctAnswer: string;
     userAnswer: string;
     isCorrect: boolean;
     timeSpent: number; // ミリ秒
 }
-
-// サンプル問題データ
-const sampleQuizItems: QuizItem[] = [
-    { id: 1, word: 'apple', answer: 'りんご', hint: '赤い果物' },
-    { id: 2, word: 'book', answer: '本', hint: '読むもの' },
-    { id: 3, word: 'computer', answer: 'コンピューター', hint: '電子機器' },
-    { id: 4, word: 'window', answer: '窓', hint: '外を見るもの' },
-    { id: 5, word: 'chair', answer: '椅子', hint: '座るもの' },
-];
 
 export default function QuizPage() {
     const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
@@ -71,11 +64,49 @@ export default function QuizPage() {
     const [startTime, setStartTime] = useState<number>(Date.now());
     const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
     const [totalTimeSpent, setTotalTimeSpent] = useState<number>(0);
+    const [quizItems, setQuizItems] = useState<QuizItem[]>([]);
+    const [dataLoading, setDataLoading] = useState(true);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const currentQuiz = sampleQuizItems[currentQuizIndex];
-    const { loading } = useAuth();
+    const currentQuiz = quizItems[currentQuizIndex];
+    const { user, loading } = useAuth();
     const router = useRouter();
+
+    // 初期データ読み込み
+    useEffect(() => {
+        const loadQuizData = async () => {
+            if (!user?.studentId) return;
+
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const level = urlParams.get('level') || '1';
+                const mode = urlParams.get('mode') || 'training';
+
+                const endpoint =
+                    mode === 'review'
+                        ? `/api/training/getReviewWords?studentId=${user.studentId}&level=${level}`
+                        : `/api/training/getTrainingWords?level=${level}`;
+
+                const response = await fetcher(endpoint);
+
+                if (response.flg && response.data) {
+                    setQuizItems(response.data);
+                } else {
+                    console.error('問題データの取得に失敗:', response.message);
+                    router.push('/student/training');
+                }
+            } catch (error) {
+                console.error('問題データ読み込みエラー:', error);
+                router.push('/student/training');
+            } finally {
+                setDataLoading(false);
+            }
+        };
+
+        if (user && !loading) {
+            loadQuizData();
+        }
+    }, [user, loading, router]);
 
     // 問題が変わったらフォームをリセット
     useEffect(() => {
@@ -88,7 +119,7 @@ export default function QuizPage() {
         if (inputRef.current) {
             inputRef.current.focus();
         }
-    }, [currentQuizIndex, loading]);
+    }, [currentQuizIndex, dataLoading]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -119,13 +150,52 @@ export default function QuizPage() {
         }, 500); // フェイク送信遅延
     };
 
-    const handleNextQuestion = () => {
-        if (currentQuizIndex < sampleQuizItems.length - 1) {
+    const handleNextQuestion = async () => {
+        if (currentQuizIndex < quizItems.length - 1) {
             setCurrentQuizIndex(currentQuizIndex + 1);
         } else {
             // 全問題終了時の処理
             const endTime = Date.now();
-            setTotalTimeSpent(endTime - startTime);
+            const totalTime = endTime - startTime;
+            setTotalTimeSpent(totalTime);
+
+            // 学習結果をサーバーに送信
+            try {
+                if (user?.studentId) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const level = parseInt(urlParams.get('level') || '1');
+                    const mode = urlParams.get('mode') || 'training';
+
+                    const submissionData = {
+                        studentId: user.studentId,
+                        level,
+                        mode,
+                        results: userAnswers.map((answer) => ({
+                            wordId: answer.quizId,
+                            word: answer.word,
+                            correctAnswer: answer.correctAnswer,
+                            userAnswer: answer.userAnswer,
+                            isCorrect: answer.isCorrect,
+                            timeSpent: answer.timeSpent,
+                        })),
+                        totalTimeSpent: totalTime,
+                    };
+
+                    const res = await client.api.training.submitTrainingResult.$post({
+                        json: submissionData,
+                    });
+
+                    const result = await res.json();
+                    if (result.flg) {
+                        console.log('学習結果送信成功:', (result as any).summary || '送信完了');
+                    } else {
+                        console.error('学習結果送信失敗:', result.message);
+                    }
+                }
+            } catch (error) {
+                console.error('学習結果送信エラー:', error);
+            }
+
             setQuizCompleted(true);
         }
     };
@@ -136,13 +206,42 @@ export default function QuizPage() {
         setQuizCompleted(false);
         setStartTime(Date.now());
         setQuestionStartTime(Date.now());
+
+        // 新しい問題セットを取得
+        const loadQuizData = async () => {
+            if (!user?.studentId) return;
+
+            try {
+                setDataLoading(true);
+                const urlParams = new URLSearchParams(window.location.search);
+                const level = urlParams.get('level') || '1';
+                const mode = urlParams.get('mode') || 'training';
+
+                const endpoint =
+                    mode === 'review'
+                        ? `/api/training/getReviewWords?studentId=${user.studentId}&level=${level}`
+                        : `/api/training/getTrainingWords?level=${level}`;
+
+                const response = await fetcher(endpoint);
+
+                if (response.flg && response.data) {
+                    setQuizItems(response.data);
+                }
+            } catch (error) {
+                console.error('問題データ再読み込みエラー:', error);
+            } finally {
+                setDataLoading(false);
+            }
+        };
+
+        loadQuizData();
     };
 
     const toggleHint = () => {
         setShowHint(!showHint);
     };
 
-    const progress = ((currentQuizIndex + 1) / sampleQuizItems.length) * 100;
+    const progress = quizItems.length > 0 ? ((currentQuizIndex + 1) / quizItems.length) * 100 : 0;
 
     // 結果の集計
     const correctAnswers = userAnswers.filter((answer) => answer.isCorrect).length;
@@ -160,8 +259,29 @@ export default function QuizPage() {
         return '基礎からしっかり復習しましょう。';
     };
 
-    if (loading) {
+    if (loading || dataLoading) {
         return <Loading />;
+    }
+
+    if (!currentQuiz) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                        問題が見つかりません
+                    </h2>
+                    <p className="text-gray-600 mb-4">
+                        トレーニングページに戻って再度お試しください。
+                    </p>
+                    <Button
+                        onClick={() => router.push('/student/training')}
+                        className="cursor-pointer"
+                    >
+                        トレーニングページへ戻る
+                    </Button>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -176,7 +296,7 @@ export default function QuizPage() {
                                 <div className="bg-white rounded-lg shadow p-4">
                                     <div className="flex justify-between text-sm text-gray-600 mb-2">
                                         <span>
-                                            問題 {currentQuizIndex + 1} / {sampleQuizItems.length}
+                                            問題 {currentQuizIndex + 1} / {quizItems.length}
                                         </span>
                                         <span>進捗 {Math.round(progress)}%</span>
                                     </div>
@@ -185,8 +305,10 @@ export default function QuizPage() {
                                             className="bg-blue-600 h-2.5 rounded-full"
                                             initial={{
                                                 width: `${
-                                                    (currentQuizIndex / sampleQuizItems.length) *
-                                                    100
+                                                    quizItems.length > 0
+                                                        ? (currentQuizIndex / quizItems.length) *
+                                                          100
+                                                        : 0
                                                 }%`,
                                             }}
                                             animate={{ width: `${progress}%` }}
@@ -340,7 +462,7 @@ export default function QuizPage() {
                                                             className="w-full bg-blue-500 cursor-pointer"
                                                         >
                                                             {currentQuizIndex <
-                                                            sampleQuizItems.length - 1 ? (
+                                                            quizItems.length - 1 ? (
                                                                 <>
                                                                     次の問題へ
                                                                     <ArrowRight className="ml-2 h-4 w-4" />

@@ -69,7 +69,7 @@ export default function AdminStudents() {
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState<boolean>(false);
     const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
-    const { students, isLoading, isError } = useStudents();
+    const { students, isLoading, isError, refetch } = useStudents();
     const router = useRouter();
 
     useEffect(() => {
@@ -152,8 +152,8 @@ export default function AdminStudents() {
                     const data = await res.json();
 
                     if (data.flg) {
+                        await refetch();
                         resolve(data.message);
-                        window.location.reload();
                     } else {
                         reject(data.message);
                     }

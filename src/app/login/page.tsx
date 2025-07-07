@@ -24,6 +24,7 @@ import {
     EyeOff,
 } from 'lucide-react';
 import Link from 'next/link';
+import { mutate } from 'swr';
 import toast from 'react-hot-toast';
 import { client } from '@/lib/HonoClient';
 import {
@@ -99,6 +100,7 @@ export default function LoginPage() {
                     const responseData = await res.json();
 
                     if (responseData.flg) {
+                        await mutate('/api/auth/getStudentInfo');
                         resolve(responseData.message);
                         router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/student/dashboard`);
                     } else {

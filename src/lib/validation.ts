@@ -2,6 +2,51 @@
 
 import { z } from 'zod';
 
+// パスワード強度チェックメソッド
+export const getPasswordStrength = (password: string) => {
+    const strength = checkPasswordStrength(password);
+
+    const strengthMap = {
+        weak: {
+            label: '弱い',
+            color: 'bg-red-500',
+            width: 'w-1/4',
+            message: 'パスワードは8文字以上必要です',
+        },
+        medium: {
+            label: '普通',
+            color: 'bg-yellow-500',
+            width: 'w-2/4',
+            message: '大文字と数字を含めてください',
+        },
+        good: {
+            label: '良い',
+            color: 'bg-blue-500',
+            width: 'w-3/4',
+            message: '特殊文字を含めるとより安全です',
+        },
+        strong: {
+            label: '強い',
+            color: 'bg-green-500',
+            width: 'w-full',
+            message: 'パスワードの強度は十分です',
+        },
+    };
+
+    return {
+        strength,
+        ...strengthMap[strength],
+    };
+};
+
+const checkPasswordStrength = (password: string) => {
+    if (password.length < 8) return 'weak';
+    if (!/[A-Z]/.test(password)) return 'medium';
+    if (!/[0-9]/.test(password)) return 'medium';
+    if (!/[^A-Za-z0-9]/.test(password)) return 'good';
+    return 'strong';
+};
+
 // ログイン時の生徒のバリデーション
 export const studentLoginValidation = z.object({
     studentId: z.string().nonempty('生徒IDは必須です'),
@@ -107,3 +152,21 @@ export const sendMessageFromAdminValidation = z.object({
 });
 
 export type sendMessageFromAdminFormData = z.infer<typeof sendMessageFromAdminValidation>;
+
+// 生徒のパスワード変更バリデーション
+export const studentPasswordChangeValidation = z.object({
+    currentPassword: z.string().nonempty('現在のパスワードを入力してください'),
+
+    newPassword: z
+        .string()
+        .min(8, 'パスワードは8文字以上で入力してください')
+        .regex(/[0-9]/, '数字を含めてください')
+        .refine(
+            (password) => checkPasswordStrength(password) !== 'weak',
+            'パスワードが弱すぎます。8文字以上で設定してください'
+        ),
+
+    confirmPassword: z.string().nonempty('パスワードの確認を入力してください'),
+});
+
+export type studentPasswordChangeFormData = z.infer<typeof studentPasswordChangeValidation>;

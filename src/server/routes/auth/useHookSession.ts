@@ -18,6 +18,8 @@ export const hookSession = new Hono().get('/useSession', async (c) => {
             studentId: students.studentId,
             name: students.name,
             grade: students.grade,
+            registeredAt: students.registeredAt,
+            lastLoginAt: students.lastLoginAt,
         })
         .from(students)
         .where(eq(students.id, session.userId));

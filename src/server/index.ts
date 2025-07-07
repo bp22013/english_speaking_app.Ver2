@@ -7,6 +7,7 @@ import { logger } from 'hono/logger';
 import authApp from './routes/auth';
 import wordApp from './routes/words';
 import messageApp from './routes/messages';
+import trainingApp from './routes/training';
 
 const app = new Hono();
 
@@ -17,7 +18,8 @@ app.use(logger());
 export const route = app
     .route('/api/auth', authApp)
     .route('/api/word', wordApp)
-    .route('/api/messages', messageApp);
+    .route('/api/messages', messageApp)
+    .route('/api/training', trainingApp);
 
 export type AppType = typeof route;
 export default app;

@@ -14,10 +14,6 @@ export const useAdminMessages = (): {
     const { user } = useAdminSession();
     const shouldFetch = !!user?.id;
 
-    // 🔍 ログポイント①：user と fetch 条件
-    console.log('🔍 useAdminMessages - user:', user);
-    console.log('🔍 useAdminMessages - shouldFetch:', shouldFetch);
-
     const { data, error, isLoading, mutate } = useSWR(
         shouldFetch ? `/api/messages/getAdminMessages?senderId=${user?.id}` : null,
         fetcher

@@ -8,10 +8,12 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 type Student = {
+    sessionId: string;
     studentId: string;
     name: string;
     grade: string | null;
-    sessionId: string | null;
+    registeredAt: string | null;
+    lastLoginAt: string | null;
 };
 
 type AuthContextType = {

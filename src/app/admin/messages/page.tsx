@@ -1,6 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from 'react';
+import { useAdminMessagesContext } from '@/app/context/AdminMessagesContext';
+import { useAdminSession } from '@/app/context/AdminAuthContext';
+import { DeleteMessageModal } from '@/app/components/DeleteMessageModal';
+import { EditMessageModal } from '@/app/components/EditMessageModal';
+import toast from 'react-hot-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,102 +53,43 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { client } from '@/lib/HonoClient';
 
-// メッセージデータの型定義
-interface AdminMessage {
-    id: number;
-    type: 'announcement' | 'personal' | 'achievement' | 'reminder';
-    title: string;
-    content: string;
-    priority: 'low' | 'medium' | 'high';
-    status: 'sent' | 'scheduled' | 'draft';
-    recipientCount: number;
-    sentAt?: string;
-    scheduledAt?: string;
-    createdAt: string;
-    readCount: number;
-}
-
-// サンプルメッセージデータ
-const sampleMessages: AdminMessage[] = [
-    {
-        id: 1,
-        type: 'announcement',
-        title: '新機能リリースのお知らせ',
-        content: 'VocabMasterに新しい学習モード「リスニングチャレンジ」が追加されました。',
-        priority: 'high',
-        status: 'sent',
-        recipientCount: 156,
-        sentAt: '2024年1月15日 14:30',
-        createdAt: '2024年1月15日 14:25',
-        readCount: 142,
-    },
-    {
-        id: 2,
-        type: 'reminder',
-        title: '週末の学習リマインダー',
-        content: '今週の学習目標の達成状況を確認しましょう。',
-        priority: 'medium',
-        status: 'scheduled',
-        recipientCount: 89,
-        scheduledAt: '2024年1月20日 09:00',
-        createdAt: '2024年1月15日 10:00',
-        readCount: 0,
-    },
-    {
-        id: 3,
-        type: 'personal',
-        title: '学習進捗について',
-        content: '最近の学習進捗を確認させていただきました。',
-        priority: 'medium',
-        status: 'sent',
-        recipientCount: 1,
-        sentAt: '2024年1月14日 16:45',
-        createdAt: '2024年1月14日 16:40',
-        readCount: 1,
-    },
-    {
-        id: 4,
-        type: 'achievement',
-        title: '1000単語達成者への祝福メッセージ',
-        content: '素晴らしい成果です！累計1000単語の学習を達成されました。',
-        priority: 'high',
-        status: 'sent',
-        recipientCount: 12,
-        sentAt: '2024年1月12日 10:15',
-        createdAt: '2024年1月12日 10:10',
-        readCount: 12,
-    },
-    {
-        id: 5,
-        type: 'announcement',
-        title: 'メンテナンスのお知らせ',
-        content: 'システムメンテナンスを実施いたします。',
-        priority: 'medium',
-        status: 'draft',
-        recipientCount: 0,
-        createdAt: '2024年1月10日 18:00',
-        readCount: 0,
-    },
-];
+// AdminMessagesContextの型を使用
+type AdminMessage = ReturnType<typeof useAdminMessagesContext>['messages'][0];
 
 export default function AdminMessages() {
-    const [messages, setMessages] = useState<AdminMessage[]>(sampleMessages);
+    const { messages, isLoading, refetch } = useAdminMessagesContext();
+    const { user } = useAdminSession();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedType, setSelectedType] = useState<string>('all');
     const [selectedStatus, setSelectedStatus] = useState<string>('all');
     const [selectedMessage, setSelectedMessage] = useState<AdminMessage | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
 
+    // 削除モーダル用の状態
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [messageToDelete, setMessageToDelete] = useState<AdminMessage | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // 編集モーダル用の状態
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [messageToEdit, setMessageToEdit] = useState<AdminMessage | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
     const router = useRouter();
 
     // フィルタリング
-    const filteredMessages = messages.filter((message) => {
+    const filteredMessages = messages.filter((message: AdminMessage) => {
         const matchesSearch =
-            message.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            message.content.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesType = selectedType === 'all' || message.type === selectedType;
-        const matchesStatus = selectedStatus === 'all' || message.status === selectedStatus;
+            message.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            message.recipients?.some((recipient: any) =>
+                recipient.studentName?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        const matchesType = selectedType === 'all' || message.messageType === selectedType;
+        // スケジュール状態の判定
+        const status = message.scheduledAt ? 'scheduled' : 'sent';
+        const matchesStatus = selectedStatus === 'all' || status === selectedStatus;
         return matchesSearch && matchesType && matchesStatus;
     });
 
@@ -193,13 +139,97 @@ export default function AdminMessages() {
         setIsDetailOpen(true);
     };
 
-    const handleDeleteMessage = (messageId: number) => {
-        setMessages(messages.filter((msg) => msg.id !== messageId));
+    // 削除機能
+    const handleDeleteMessage = (message: AdminMessage) => {
+        setMessageToDelete(message);
+        setIsDeleteModalOpen(true);
     };
 
-    const getReadRate = (message: AdminMessage) => {
-        if (message.status !== 'sent' || message.recipientCount === 0) return 0;
-        return Math.round((message.readCount / message.recipientCount) * 100);
+    const confirmDeleteMessage = async () => {
+        if (!messageToDelete) return;
+
+        setIsDeleting(true);
+
+        toast.promise(
+            new Promise(async (resolve, reject) => {
+                try {
+                    const response = await client.api.messages.deleteMessage.$post({
+                        json: {
+                            messageIds: [messageToDelete.id],
+                            senderId: user?.id || messageToDelete.senderId || 'unknown',
+                        },
+                    });
+
+                    const data = await response.json();
+
+                    if (data.flg) {
+                        resolve('メッセージを削除しました!');
+                        await refetch();
+                        setIsDeleteModalOpen(false);
+                        setMessageToDelete(null);
+                    } else {
+                        reject(data.message || 'メッセージの削除に失敗しました');
+                    }
+                } catch (error) {
+                    console.log('削除エラー:', error);
+                    reject(`メッセージの削除に失敗しました: ${error}`);
+                } finally {
+                    setIsDeleting(false);
+                }
+            }),
+            {
+                loading: '削除中です...',
+                success: '削除しました!',
+                error: (message: string) => message,
+            }
+        );
+    };
+
+    // 編集機能
+    const handleEditMessage = (message: AdminMessage) => {
+        setMessageToEdit(message);
+        setIsEditModalOpen(true);
+    };
+
+    const saveEditMessage = async (data: any) => {
+        if (!messageToEdit) return;
+
+        setIsSaving(true);
+
+        toast.promise(
+            new Promise(async (resolve, reject) => {
+                try {
+                    const response = await client.api.messages.updateMessage.$post({
+                        json: {
+                            messageId: messageToEdit.id,
+                            ...data,
+                            senderId: user?.id || messageToEdit.senderId || 'unknown',
+                        },
+                    });
+
+                    const result = await response.json();
+
+                    if (result.flg) {
+                        resolve('メッセージを更新しました!');
+                        refetch();
+                        setIsEditModalOpen(false);
+                        setMessageToEdit(null);
+                    } else {
+                        reject(result.message || 'メッセージの更新に失敗しました');
+                    }
+                } catch (error) {
+                    console.log('更新エラー:', error);
+                    reject(`メッセージの更新に失敗しました: ${error}`);
+                } finally {
+                    setIsSaving(false);
+                }
+            }),
+            {
+                loading: '更新中です...',
+                success: '更新しました!',
+                error: (message: string) => message,
+            }
+        );
     };
 
     return (
@@ -259,7 +289,7 @@ export default function AdminMessages() {
                                     {
                                         title: '送信済み',
                                         value: messages
-                                            .filter((m) => m.status === 'sent')
+                                            .filter((m) => !m.scheduledAt)
                                             .length.toString(),
                                         icon: Send,
                                         color: 'green',
@@ -267,18 +297,27 @@ export default function AdminMessages() {
                                     {
                                         title: '予約中',
                                         value: messages
-                                            .filter((m) => m.status === 'scheduled')
+                                            .filter((m) => m.scheduledAt)
                                             .length.toString(),
                                         icon: Calendar,
                                         color: 'yellow',
                                     },
                                     {
-                                        title: '下書き',
-                                        value: messages
-                                            .filter((m) => m.status === 'draft')
-                                            .length.toString(),
-                                        icon: Edit,
-                                        color: 'gray',
+                                        title: '既読率',
+                                        value:
+                                            messages.length > 0
+                                                ? `${Math.round(
+                                                      messages.reduce(
+                                                          (acc, m) =>
+                                                              acc +
+                                                              (m.readCount / m.totalRecipients) *
+                                                                  100,
+                                                          0
+                                                      ) / messages.length
+                                                  )}%`
+                                                : '0%',
+                                        icon: Eye,
+                                        color: 'blue',
                                     },
                                 ].map((stat, index) => {
                                     const Icon = stat.icon;
@@ -414,12 +453,14 @@ export default function AdminMessages() {
                                     <div className="space-y-4">
                                         <AnimatePresence>
                                             {filteredMessages.map((message) => {
-                                                const typeConfig = getTypeConfig(message.type);
-                                                const statusConfig = getStatusConfig(
-                                                    message.status
+                                                const typeConfig = getTypeConfig(
+                                                    message.messageType || 'announcement'
                                                 );
+                                                const status = message.scheduledAt
+                                                    ? 'scheduled'
+                                                    : 'sent';
+                                                const statusConfig = getStatusConfig(status);
                                                 const TypeIcon = typeConfig.icon;
-                                                const readRate = getReadRate(message);
 
                                                 return (
                                                     <motion.div
@@ -429,9 +470,8 @@ export default function AdminMessages() {
                                                         exit={{ opacity: 0 }}
                                                         whileHover={{ scale: 1.01 }}
                                                         className={`border rounded-lg p-4 cursor-pointer transition-all duration-300 hover:shadow-md border-l-4 ${getPriorityColor(
-                                                            message.priority
+                                                            message.messagePriority || 'medium'
                                                         )}`}
-                                                        onClick={() => handleViewDetails(message)}
                                                     >
                                                         <div className="flex items-start justify-between">
                                                             <div className="flex items-start space-x-4 flex-1">
@@ -446,7 +486,11 @@ export default function AdminMessages() {
                                                                 <div className="flex-1 min-w-0">
                                                                     <div className="flex items-center space-x-2 mb-2">
                                                                         <h3 className="font-semibold text-gray-900 truncate">
-                                                                            {message.title}
+                                                                            {typeConfig.label} (
+                                                                            {
+                                                                                message.totalRecipients
+                                                                            }
+                                                                            名宛)
                                                                         </h3>
                                                                         <Badge
                                                                             variant="outline"
@@ -473,31 +517,37 @@ export default function AdminMessages() {
                                                                             <Users className="w-4 h-4" />
                                                                             <span>
                                                                                 {
-                                                                                    message.recipientCount
+                                                                                    message.totalRecipients
                                                                                 }
                                                                                 名
                                                                             </span>
                                                                         </div>
-                                                                        {message.status ===
-                                                                            'sent' && (
-                                                                            <div className="flex items-center space-x-1">
-                                                                                <Eye className="w-4 h-4" />
-                                                                                <span>
-                                                                                    既読率{' '}
-                                                                                    {readRate}%
-                                                                                </span>
-                                                                            </div>
-                                                                        )}
+                                                                        <div className="flex items-center space-x-1">
+                                                                            <Eye className="w-4 h-4" />
+                                                                            <span>
+                                                                                既読率{' '}
+                                                                                {Math.round(
+                                                                                    (message.readCount /
+                                                                                        message.totalRecipients) *
+                                                                                        100
+                                                                                )}
+                                                                                %
+                                                                            </span>
+                                                                        </div>
                                                                         <div className="flex items-center space-x-1">
                                                                             <Clock className="w-4 h-4" />
                                                                             <span>
-                                                                                {message.status ===
-                                                                                'sent'
-                                                                                    ? `送信: ${message.sentAt}`
-                                                                                    : message.status ===
-                                                                                      'scheduled'
-                                                                                    ? `予約: ${message.scheduledAt}`
-                                                                                    : `作成: ${message.createdAt}`}
+                                                                                {message.scheduledAt
+                                                                                    ? `予約: ${new Date(
+                                                                                          message.scheduledAt
+                                                                                      ).toLocaleString(
+                                                                                          'ja-JP'
+                                                                                      )}`
+                                                                                    : `送信: ${new Date(
+                                                                                          message.sentAt
+                                                                                      ).toLocaleString(
+                                                                                          'ja-JP'
+                                                                                      )}`}
                                                                             </span>
                                                                         </div>
                                                                     </div>
@@ -509,6 +559,7 @@ export default function AdminMessages() {
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
+                                                                        className="cursor-pointer"
                                                                         onClick={(e) =>
                                                                             e.stopPropagation()
                                                                         }
@@ -522,33 +573,38 @@ export default function AdminMessages() {
                                                                     </DropdownMenuLabel>
                                                                     <DropdownMenuSeparator />
                                                                     <DropdownMenuItem
-                                                                        onClick={() =>
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
                                                                             handleViewDetails(
                                                                                 message
-                                                                            )
-                                                                        }
+                                                                            );
+                                                                        }}
+                                                                        className="cursor-pointer"
                                                                     >
                                                                         <Eye className="mr-2 h-4 w-4" />
                                                                         詳細を見る
                                                                     </DropdownMenuItem>
-                                                                    {message.status === 'draft' && (
-                                                                        <DropdownMenuItem asChild>
-                                                                            <Link
-                                                                                href={`/admin/messages/edit/${message.id}`}
-                                                                            >
-                                                                                <Edit className="mr-2 h-4 w-4" />
-                                                                                編集
-                                                                            </Link>
-                                                                        </DropdownMenuItem>
-                                                                    )}
+                                                                    <DropdownMenuItem
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleEditMessage(
+                                                                                message
+                                                                            );
+                                                                        }}
+                                                                        className="cursor-pointer"
+                                                                    >
+                                                                        <Edit className="mr-2 h-4 w-4" />
+                                                                        編集
+                                                                    </DropdownMenuItem>
                                                                     <DropdownMenuSeparator />
                                                                     <DropdownMenuItem
-                                                                        onClick={() =>
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
                                                                             handleDeleteMessage(
-                                                                                message.id
-                                                                            )
-                                                                        }
-                                                                        className="text-red-600"
+                                                                                message
+                                                                            );
+                                                                        }}
+                                                                        className="text-red-600 cursor-pointer"
                                                                     >
                                                                         <Trash2 className="mr-2 h-4 w-4" />
                                                                         削除
@@ -571,7 +627,7 @@ export default function AdminMessages() {
                                                     検索条件に一致するメッセージがありません。新しいメッセージを作成してください。
                                                 </p>
                                                 <Button
-                                                    className="mt-4 bg-purple-600 hover:bg-purple-700"
+                                                    className="mt-4 bg-purple-600 hover:bg-purple-700 cursor-pointer"
                                                     asChild
                                                 >
                                                     <Link href="/admin/messages/create">
@@ -597,7 +653,9 @@ export default function AdminMessages() {
                             <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2">
                                     {(() => {
-                                        const config = getTypeConfig(selectedMessage.type);
+                                        const config = getTypeConfig(
+                                            selectedMessage.messageType || 'announcement'
+                                        );
                                         const Icon = config.icon;
                                         return (
                                             <Icon className={`w-5 h-5 text-${config.color}-600`} />
@@ -615,11 +673,12 @@ export default function AdminMessages() {
                                         <div className="flex items-center space-x-2">
                                             {(() => {
                                                 const typeConfig = getTypeConfig(
-                                                    selectedMessage.type
+                                                    selectedMessage.messageType || 'announcement'
                                                 );
-                                                const statusConfig = getStatusConfig(
-                                                    selectedMessage.status
-                                                );
+                                                const status = selectedMessage.scheduledAt
+                                                    ? 'scheduled'
+                                                    : 'sent';
+                                                const statusConfig = getStatusConfig(status);
                                                 return (
                                                     <>
                                                         <Badge
@@ -639,11 +698,18 @@ export default function AdminMessages() {
                                             })()}
                                         </div>
                                         <span className="text-sm text-gray-500">
-                                            {selectedMessage.createdAt}
+                                            {new Date(selectedMessage.sentAt).toLocaleString(
+                                                'ja-JP'
+                                            )}
                                         </span>
                                     </div>
                                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                        {selectedMessage.title}
+                                        {
+                                            getTypeConfig(
+                                                selectedMessage.messageType || 'announcement'
+                                            ).label
+                                        }{' '}
+                                        ({selectedMessage.totalRecipients}名宛)
                                     </h3>
                                     <p className="text-gray-700 whitespace-pre-wrap mb-4">
                                         {selectedMessage.content}
@@ -653,25 +719,123 @@ export default function AdminMessages() {
                                         <div>
                                             <p className="text-sm text-gray-500">送信対象</p>
                                             <p className="font-medium">
-                                                {selectedMessage.recipientCount}名
+                                                {selectedMessage.totalRecipients}名
                                             </p>
                                         </div>
-                                        {selectedMessage.status === 'sent' && (
-                                            <div>
-                                                <p className="text-sm text-gray-500">既読率</p>
-                                                <p className="font-medium">
-                                                    {getReadRate(selectedMessage)}%
-                                                </p>
-                                            </div>
-                                        )}
-                                        {selectedMessage.status === 'scheduled' && (
-                                            <div>
+                                        <div>
+                                            <p className="text-sm text-gray-500">既読率</p>
+                                            <p className="font-medium">
+                                                {Math.round(
+                                                    (selectedMessage.readCount /
+                                                        selectedMessage.totalRecipients) *
+                                                        100
+                                                )}
+                                                % ({selectedMessage.readCount}/
+                                                {selectedMessage.totalRecipients})
+                                            </p>
+                                        </div>
+                                        {selectedMessage.scheduledAt && (
+                                            <div className="col-span-2">
                                                 <p className="text-sm text-gray-500">送信予定</p>
                                                 <p className="font-medium">
-                                                    {selectedMessage.scheduledAt}
+                                                    {new Date(
+                                                        selectedMessage.scheduledAt
+                                                    ).toLocaleString('ja-JP')}
                                                 </p>
                                             </div>
                                         )}
+                                    </div>
+
+                                    {/* 受信者一覧 */}
+                                    <div className="pt-3 border-t border-gray-200">
+                                        <p className="text-sm text-gray-500 mb-2">受信者一覧</p>
+                                        <div className="max-h-32 overflow-y-auto space-y-1">
+                                            {selectedMessage.recipients?.map(
+                                                (
+                                                    recipient: {
+                                                        studentName:
+                                                            | string
+                                                            | number
+                                                            | bigint
+                                                            | boolean
+                                                            | ReactElement<
+                                                                  unknown,
+                                                                  | string
+                                                                  | JSXElementConstructor<any>
+                                                              >
+                                                            | Iterable<ReactNode>
+                                                            | ReactPortal
+                                                            | Promise<
+                                                                  | string
+                                                                  | number
+                                                                  | bigint
+                                                                  | boolean
+                                                                  | ReactPortal
+                                                                  | ReactElement<
+                                                                        unknown,
+                                                                        | string
+                                                                        | JSXElementConstructor<any>
+                                                                    >
+                                                                  | Iterable<ReactNode>
+                                                                  | null
+                                                                  | undefined
+                                                              >
+                                                            | null
+                                                            | undefined;
+                                                        studentGrade:
+                                                            | string
+                                                            | number
+                                                            | bigint
+                                                            | boolean
+                                                            | ReactElement<
+                                                                  unknown,
+                                                                  | string
+                                                                  | JSXElementConstructor<any>
+                                                              >
+                                                            | Iterable<ReactNode>
+                                                            | ReactPortal
+                                                            | Promise<
+                                                                  | string
+                                                                  | number
+                                                                  | bigint
+                                                                  | boolean
+                                                                  | ReactPortal
+                                                                  | ReactElement<
+                                                                        unknown,
+                                                                        | string
+                                                                        | JSXElementConstructor<any>
+                                                                    >
+                                                                  | Iterable<ReactNode>
+                                                                  | null
+                                                                  | undefined
+                                                              >
+                                                            | null
+                                                            | undefined;
+                                                        isRead: any;
+                                                    },
+                                                    index: Key | null | undefined
+                                                ) => (
+                                                    <div
+                                                        key={index}
+                                                        className="flex items-center justify-between text-xs"
+                                                    >
+                                                        <span>
+                                                            {recipient.studentName} (
+                                                            {recipient.studentGrade})
+                                                        </span>
+                                                        <span
+                                                            className={`px-2 py-1 rounded ${
+                                                                recipient.isRead
+                                                                    ? 'bg-green-100 text-green-700'
+                                                                    : 'bg-gray-100 text-gray-700'
+                                                            }`}
+                                                        >
+                                                            {recipient.isRead ? '既読' : '未読'}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -679,6 +843,41 @@ export default function AdminMessages() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* 削除確認モーダル */}
+            {messageToDelete && (
+                <DeleteMessageModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => {
+                        setIsDeleteModalOpen(false);
+                        setMessageToDelete(null);
+                    }}
+                    onConfirm={confirmDeleteMessage}
+                    isDeleting={isDeleting}
+                    messageContent={messageToDelete.content}
+                    recipientCount={messageToDelete.totalRecipients}
+                />
+            )}
+
+            {/* 編集モーダル */}
+            {messageToEdit && (
+                <EditMessageModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => {
+                        setIsEditModalOpen(false);
+                        setMessageToEdit(null);
+                    }}
+                    onSave={saveEditMessage}
+                    isSaving={isSaving}
+                    initialData={{
+                        content: messageToEdit.content,
+                        messageType: messageToEdit.messageType,
+                        messagePriority: messageToEdit.messagePriority,
+                        scheduledAt: messageToEdit.scheduledAt || '',
+                        recipientCount: messageToEdit.totalRecipients,
+                    }}
+                />
+            )}
         </div>
     );
 }

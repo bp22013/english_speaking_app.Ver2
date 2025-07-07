@@ -78,8 +78,6 @@ export default function AdminMessageCreate() {
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    console.log('✅ students in AdminMessageCreate:', students);
-
     useEffect(() => {
         console.log('🔍 AdminMessageCreate mounted');
     }, []);
@@ -187,7 +185,7 @@ export default function AdminMessageCreate() {
 
                     if (responceData.flg) {
                         resolve(responceData.message);
-                        refetch(); // メッセージリストを更新
+                        await refetch(); // メッセージリストを更新
                         router.push('/admin/messages');
                     } else {
                         reject(responceData.message);
@@ -588,8 +586,8 @@ export default function AdminMessageCreate() {
                                                         {isSubmitting
                                                             ? '送信中...'
                                                             : scheduledAt
-                                                              ? '予約送信'
-                                                              : '送信'}
+                                                            ? '予約送信'
+                                                            : '送信'}
                                                     </Button>
                                                 </div>
                                             </CardContent>
@@ -699,7 +697,9 @@ export default function AdminMessageCreate() {
 
                                                         {/* 生徒リスト */}
                                                         <div
-                                                            className={`max-h-64 ${!sendToAll ? 'overflow-y-auto' : ''} space-y-2`}
+                                                            className={`max-h-64 ${
+                                                                !sendToAll ? 'overflow-y-auto' : ''
+                                                            } space-y-2`}
                                                         >
                                                             {filteredStudents.map(
                                                                 (

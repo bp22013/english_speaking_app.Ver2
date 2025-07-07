@@ -23,27 +23,27 @@ export const sendMessageFromAdmin = new Hono().post('/sendMessageFromAdmin', asy
         let targetStudentIds: string[] = [];
 
         if (sendToAll) {
-            const allStudents = await db.select({ id: students.id }).from(students);
-            targetStudentIds = allStudents.map((s) => s.id);
+            const allStudents = await db.select({ studentId: students.studentId }).from(students);
+            targetStudentIds = allStudents.map((s) => s.studentId);
         } else {
             const studentsByGrade = selectedGrades.length
                 ? await db
-                      .select({ id: students.id })
+                      .select({ studentId: students.studentId })
                       .from(students)
                       .where(inArray(students.grade, selectedGrades))
                 : [];
 
             const studentsById = selectedStudentIds.length
                 ? await db
-                      .select({ id: students.id })
+                      .select({ studentId: students.studentId })
                       .from(students)
-                      .where(inArray(students.id, selectedStudentIds))
+                      .where(inArray(students.studentId, selectedStudentIds))
                 : [];
 
             const combined = [...studentsByGrade, ...studentsById];
 
             // 重複除外
-            targetStudentIds = Array.from(new Set(combined.map((s) => s.id)));
+            targetStudentIds = Array.from(new Set(combined.map((s) => s.studentId)));
         }
 
         if (targetStudentIds.length === 0) {

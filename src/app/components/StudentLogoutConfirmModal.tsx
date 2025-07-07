@@ -1,3 +1,5 @@
+/* 生徒のログアウト確認モーダルコンポーネント */
+
 'use client';
 
 import {
@@ -12,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useState } from 'react';
+import { useStudents } from '../hooks/useStudents';
 import { client } from '@/lib/HonoClient';
 
 interface Props {
@@ -23,8 +26,10 @@ interface Props {
 
 export const LogoutConfirmDialog = ({ open, onOpenChange, sessionId, studentId }: Props) => {
     const [isLoading, setIsLoading] = useState(false);
+    const { refetch } = useStudents();
     const router = useRouter();
 
+    // ログアウト処理
     const handleLogout = async () => {
         toast.promise(
             new Promise(async (resolve, reject) => {
@@ -38,7 +43,8 @@ export const LogoutConfirmDialog = ({ open, onOpenChange, sessionId, studentId }
                     const data = await res.json();
 
                     if (data.flg) {
-                        resolve(data.message);
+                        await refetch();
+                        await resolve(data.message);
                         router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/`);
                     } else {
                         reject(data.error || 'ログアウトに失敗しました');

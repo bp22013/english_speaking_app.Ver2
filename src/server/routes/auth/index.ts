@@ -9,6 +9,8 @@ import { DeleteStudent } from './DeleteStudent';
 import { studentLogout } from './StudentLogout';
 import { hookSession } from './useHookSession';
 import { updateStudent } from './StudentUpdate';
+import { changeStudentPassword } from './changeStudentPassword';
+import { updateStudentProfile } from './updateStudentProfile';
 
 const authApp = new Hono()
     .route('/', studentLogin)
@@ -18,6 +20,8 @@ const authApp = new Hono()
     .route('/', DeleteStudent)
     .route('/', studentLogout)
     .route('/', hookSession)
-    .route('/', updateStudent);
+    .route('/', updateStudent)
+    .route('/', changeStudentPassword)
+    .route('/', updateStudentProfile);
 
 export default authApp;

@@ -7,10 +7,11 @@ import { sessionCheck } from './sessionCheck';
 import { getAllStudents } from './getAllStudent';
 import { DeleteStudent } from './DeleteStudent';
 import { studentLogout } from './StudentLogout';
-import { hookSession } from './useHookSession';
+import { hookSession } from './getStudentSession';
 import { updateStudent } from './StudentUpdate';
 import { changeStudentPassword } from './changeStudentPassword';
 import { updateStudentProfile } from './updateStudentProfile';
+import { adminUpdate } from './AdminProfileUpdate';
 
 const authApp = new Hono()
     .route('/', studentLogin)
@@ -22,6 +23,7 @@ const authApp = new Hono()
     .route('/', hookSession)
     .route('/', updateStudent)
     .route('/', changeStudentPassword)
-    .route('/', updateStudentProfile);
+    .route('/', updateStudentProfile)
+    .route('/', adminUpdate);
 
 export default authApp;

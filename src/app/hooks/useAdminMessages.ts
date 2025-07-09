@@ -1,5 +1,6 @@
 /* 管理者のメッセージをSWRで取得するフック */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import useSWR from 'swr';
 import { fetcher } from '@/lib/fetcher';
 import { useAdminSession } from '@/app/context/AdminAuthContext';

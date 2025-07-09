@@ -145,19 +145,19 @@ export default function AdminSettings() {
     const loadStatisticsData = async () => {
         setIsLoadingStats(true);
         try {
-            const response = await fetch('/api/auth/exportStatistics', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ format: 'json' }),
+            const response = await client.api.auth.exportStatistics.$post({
+                json: { format: 'json' },
             });
+
             const data = await response.json();
             if (data.flg) {
-                setStatisticsData(data.data);
+                setStatisticsData(data.data || []);
+            } else {
+                toast.error(data.message || '統計データの取得に失敗しました');
             }
         } catch (error) {
             console.error('統計データ取得エラー:', error);
+            toast.error('統計データの取得に失敗しました');
         } finally {
             setIsLoadingStats(false);
         }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* 管理者が送信したメッセージ一覧を取得するAPI */
 
 import { Hono } from 'hono';
@@ -9,7 +10,7 @@ export const getAdminMessages = new Hono().get('/getAdminMessages', async (c) =>
     try {
         // 送信者IDをクエリパラメータから取得
         const senderId = c.req.query('senderId');
-        
+
         if (!senderId) {
             return c.json({ error: '送信者IDが必要です' }, 400);
         }
@@ -35,43 +36,52 @@ export const getAdminMessages = new Hono().get('/getAdminMessages', async (c) =>
             .orderBy(desc(messages.sentAt));
 
         // 同じ内容・タイプ・優先度・送信時間のメッセージをグループ化
-        const groupedMessages = messageList.reduce((acc, message) => {
-            const key = `${message.content}-${message.messageType}-${message.messagePriority}-${message.sentAt}-${message.scheduledAt}`;
-            
-            if (!acc[key]) {
-                acc[key] = {
-                    ...message,
-                    recipients: [],
-                    totalRecipients: 0,
-                    readCount: 0,
-                };
-            }
-            
-            acc[key].recipients.push({
-                studentId: message.studentId,
-                studentName: message.studentName,
-                studentGrade: message.studentGrade,
-                isRead: message.isRead,
-            });
-            acc[key].totalRecipients++;
-            if (message.isRead) {
-                acc[key].readCount++;
-            }
-            
-            return acc;
-        }, {} as Record<string, any>);
+        const groupedMessages = messageList.reduce(
+            (acc, message) => {
+                const key = `${message.content}-${message.messageType}-${message.messagePriority}-${message.sentAt}-${message.scheduledAt}`;
+
+                if (!acc[key]) {
+                    acc[key] = {
+                        ...message,
+                        recipients: [],
+                        totalRecipients: 0,
+                        readCount: 0,
+                    };
+                }
+
+                acc[key].recipients.push({
+                    studentId: message.studentId,
+                    studentName: message.studentName,
+                    studentGrade: message.studentGrade,
+                    isRead: message.isRead,
+                });
+                acc[key].totalRecipients++;
+                if (message.isRead) {
+                    acc[key].readCount++;
+                }
+
+                return acc;
+            },
+            {} as Record<string, any>
+        );
 
         const groupedMessageList = Object.values(groupedMessages);
 
-        return c.json({ 
-            flg: true,
-            messages: groupedMessageList 
-        }, 200);
+        return c.json(
+            {
+                flg: true,
+                messages: groupedMessageList,
+            },
+            200
+        );
     } catch (error) {
         console.error('メッセージ取得エラー:', error);
-        return c.json({ 
-            flg: false,
-            error: 'メッセージ情報の取得に失敗しました' 
-        }, 500);
+        return c.json(
+            {
+                flg: false,
+                error: 'メッセージ情報の取得に失敗しました',
+            },
+            500
+        );
     }
 });

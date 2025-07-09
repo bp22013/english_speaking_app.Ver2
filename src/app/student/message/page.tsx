@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useStudentMessagesContext } from '@/app/context/StudentMessagesContext';
+import type { StudentMessage } from '@/types/message';
 import {
     Dialog,
     DialogContent,
@@ -44,7 +46,6 @@ import {
     Bell,
     User,
     BookOpen,
-    Award,
     Clock,
     Star,
 } from 'lucide-react';
@@ -72,65 +73,6 @@ interface Message {
     priority: 'low' | 'medium' | 'high';
 }
 
-const mockMessages: Message[] = [
-    {
-        id: '1',
-        type: 'announcement',
-        title: '新機能リリースのお知らせ',
-        content:
-            'VocabMasterに新しい学習モード「リスニングチャレンジ」が追加されました。ネイティブスピーカーの発音を聞いて、正しい単語を選択する新しい学習体験をお楽しみください。',
-        sender: 'VocabMaster運営チーム',
-        timestamp: '2024年12月6日 14:30',
-        isRead: false,
-        priority: 'high',
-    },
-    {
-        id: '2',
-        type: 'personal',
-        title: '学習進捗について',
-        content:
-            '田中さん、こんにちは！最近の学習進捗を確認させていただきました。特に動詞の活用で素晴らしい成果を上げていますね。この調子で頑張ってください。何かご質問があればいつでもお声かけください。',
-        sender: '山田先生',
-        senderAvatar: '/placeholder.svg?height=40&width=40',
-        timestamp: '2024年12月5日 16:45',
-        isRead: false,
-        priority: 'medium',
-    },
-    {
-        id: '3',
-        type: 'achievement',
-        title: '🎉 1000単語達成おめでとうございます！',
-        content:
-            '素晴らしい成果です！累計1000単語の学習を達成されました。継続的な努力が実を結んでいますね。次の目標は1500単語です。引き続き頑張ってください！',
-        sender: 'VocabMaster',
-        timestamp: '2024年12月3日 10:15',
-        isRead: true,
-        priority: 'high',
-    },
-    {
-        id: '4',
-        type: 'system',
-        title: '週間学習レポート',
-        content:
-            '今週の学習統計：学習時間 2.5時間、新規単語 45個、正答率 87%。先週と比較して正答率が5%向上しています。素晴らしい進歩です！',
-        sender: 'システム',
-        timestamp: '2024年12月2日 09:00',
-        isRead: true,
-        priority: 'low',
-    },
-    {
-        id: '5',
-        type: 'announcement',
-        title: 'メンテナンスのお知らせ',
-        content:
-            '12月10日（日）午前2:00〜4:00の間、システムメンテナンスを実施いたします。この間、一時的にサービスをご利用いただけません。ご不便をおかけして申し訳ございません。',
-        sender: 'VocabMaster運営チーム',
-        timestamp: '2024年12月1日 18:00',
-        isRead: true,
-        priority: 'medium',
-    },
-];
-
 const messageTypeConfig = {
     announcement: {
         icon: Bell,
@@ -156,23 +98,15 @@ const messageTypeConfig = {
         textColor: 'text-gray-700',
         iconColor: 'text-gray-600',
     },
-    achievement: {
-        icon: Award,
-        color: 'yellow',
-        label: '成果',
-        bgColor: 'bg-yellow-50',
-        textColor: 'text-yellow-700',
-        iconColor: 'text-yellow-600',
-    },
 };
 
 export default function MessagesPage() {
     const [isLoading, setIsLoading] = useState(false);
-    const [messages, setMessages] = useState<Message[]>(mockMessages);
     const [selectedType, setSelectedType] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
     const { loading } = useAuth();
+    const { messages, loading: messagesLoading } = useStudentMessagesContext();
     const unreadCount = messages.filter((msg) => !msg.isRead).length;
     const router = useRouter();
 
@@ -212,7 +146,7 @@ export default function MessagesPage() {
         }
     };
 
-    if (loading) {
+    if (loading || messagesLoading) {
         return <Loading />;
     }
 

@@ -46,9 +46,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     });
                     router.push('/');
                 }
-            } catch (err) {
+            } catch (error) {
                 setUser(null);
-                toast.error('セッション取得に失敗しました', {
+                toast.error(`セッション取得に失敗しました ${error}`, {
                     id: 'session-fetch-failed',
                 });
             } finally {

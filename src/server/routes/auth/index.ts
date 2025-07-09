@@ -12,6 +12,7 @@ import { updateStudent } from './StudentUpdate';
 import { changeStudentPassword } from './changeStudentPassword';
 import { updateStudentProfile } from './updateStudentProfile';
 import { adminUpdate } from './AdminProfileUpdate';
+import { dataExport } from './DataExport';
 
 const authApp = new Hono()
     .route('/', studentLogin)
@@ -24,6 +25,7 @@ const authApp = new Hono()
     .route('/', updateStudent)
     .route('/', changeStudentPassword)
     .route('/', updateStudentProfile)
-    .route('/', adminUpdate);
+    .route('/', adminUpdate)
+    .route('/', dataExport);
 
 export default authApp;

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* 管理者メッセージのコンテキスト */
 
 'use client';

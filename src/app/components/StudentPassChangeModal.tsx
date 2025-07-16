@@ -23,18 +23,11 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-    studentPasswordChangeFormData,
-    studentPasswordChangeValidation,
-    getPasswordStrength,
-} from '@/lib/validation';
+import { studentPasswordChangeFormData, studentPasswordChangeValidation } from '@/lib/validation';
+import { getPasswordStrength } from '@/lib/passwordStrength';
 import { client } from '@/lib/HonoClient';
 
-interface PasswordChangeDialogProps {
-    onPasswordChange?: (currentPassword: string, newPassword: string) => Promise<void>;
-}
-
-export function PasswordChangeDialog({ onPasswordChange }: PasswordChangeDialogProps) {
+export function PasswordChangeDialog() {
     const [isOpen, setIsOpen] = useState(false);
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
@@ -58,10 +51,11 @@ export function PasswordChangeDialog({ onPasswordChange }: PasswordChangeDialogP
     const passwordStrength = newPassword ? getPasswordStrength(newPassword) : null;
 
     const onSubmit: SubmitHandler<studentPasswordChangeFormData> = async (data) => {
-        await toast.promise(
-            new Promise(async (resolve, reject) => {
-                setIsSubmitting(true);
-                try {
+        setIsSubmitting(true);
+
+        try {
+            await toast.promise(
+                (async () => {
                     const res = await client.api.auth.changeStudentPassword.$post({
                         json: {
                             studentId: user?.studentId,
@@ -70,27 +64,28 @@ export function PasswordChangeDialog({ onPasswordChange }: PasswordChangeDialogP
                         },
                     });
 
-                    const responceData = await res.json();
+                    const responseData = await res.json();
 
-                    if (responceData.flg) {
-                        resolve(responceData.message);
-                        setIsOpen(false);
-                    } else {
-                        reject(responceData.message);
+                    if (!responseData.flg) {
+                        throw new Error(responseData.message || 'パスワードの変更に失敗しました');
                     }
-                    resolve('パスワードを変更しました！');
-                } catch (err) {
-                    reject(`不明なエラーが発生しました: ${error}`);
-                } finally {
-                    setIsSubmitting(false);
+
+                    return responseData.message || 'パスワードを変更しました！';
+                })(),
+                {
+                    loading: 'パスワードを変更しています...',
+                    success: (message: string) => message,
+                    error: (err: Error) => err.message,
                 }
-            }),
-            {
-                loading: 'パスワードを変更しています...',
-                success: 'パスワードを変更しました!',
-                error: (message: string) => message,
-            }
-        );
+            );
+
+            setIsOpen(false);
+            reset();
+        } catch (error) {
+            console.error('パスワード変更エラー:', error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const resetForm = () => {
@@ -101,14 +96,15 @@ export function PasswordChangeDialog({ onPasswordChange }: PasswordChangeDialogP
         setShowConfirmPassword(false);
     };
 
+    const handleOpenChange = (open: boolean) => {
+        setIsOpen(open);
+        if (!open) {
+            resetForm();
+        }
+    };
+
     return (
-        <Dialog
-            open={isOpen}
-            onOpenChange={(open) => {
-                setIsOpen(open);
-                if (!open) resetForm();
-            }}
-        >
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 <Button variant="outline" className="w-full justify-start cursor-pointer">
                     <Shield className="w-4 h-4 mr-2" />
@@ -250,6 +246,7 @@ export function PasswordChangeDialog({ onPasswordChange }: PasswordChangeDialogP
                         )}
                         {!errors.confirmPassword &&
                             confirmPassword &&
+                            newPassword &&
                             newPassword !== confirmPassword && (
                                 <p className="text-xs text-red-500 mt-1">
                                     パスワードが一致しません

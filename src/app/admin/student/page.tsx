@@ -63,6 +63,7 @@ const grades = ['中学1年生', '中学2年生', '中学3年生', '高校1年�
 export default function AdminStudents() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedGrade, setSelectedGrade] = useState<string>('all');
+    const [isScrollable, setIsScrollable] = useState<boolean>(false);
     const [selectedStatus, setSelectedStatus] = useState<string>('all');
     const [sortField, setSortField] = useState<string>('name');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -78,6 +79,21 @@ export default function AdminStudents() {
             router.push(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/admin/dashboard`);
         }
     }, [isError]);
+
+    useEffect(() => {
+        const checkScrollable = () => {
+            const scrollHeight = document.documentElement.scrollHeight;
+            const clientHeight = document.documentElement.clientHeight;
+            setIsScrollable(scrollHeight > clientHeight);
+        };
+
+        checkScrollable();
+        window.addEventListener('resize', checkScrollable);
+
+        return () => {
+            window.removeEventListener('resize', checkScrollable);
+        };
+    }, [students, searchQuery, selectedGrade, selectedStatus, sortField, sortDirection]);
 
     // フィルタリングと並び替え
     const filteredStudents = students
@@ -200,7 +216,11 @@ export default function AdminStudents() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div
+            className={`min-h-screen bg-gray-50 ${
+                isScrollable ? 'overflow-y-auto' : 'overflow-y-scroll'
+            }`}
+        >
             <AdminNavigation currentPage="students" />
             <PageTransition>
                 <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -1,3 +1,5 @@
+/* 生徒のメッセージ表示ページ */
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -5,9 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useStudentMessagesContext } from '@/app/context/StudentMessagesContext';
-import type { StudentMessage } from '@/types/message';
 import {
     Dialog,
     DialogContent,
@@ -25,29 +24,16 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import {
     Mail,
     Search,
     Filter,
-    MoreVertical,
-    Trash2,
-    Eye,
-    EyeOff,
     Bell,
     User,
     BookOpen,
+    Award,
     Clock,
     Star,
+    AlertCircle,
 } from 'lucide-react';
 import { StudentNavigation } from '../../components/StudentNavigationBar';
 import {
@@ -56,22 +42,13 @@ import {
     FadeIn,
     SoftFadeIn,
 } from '../../components/page-transition';
+import { useStudentMessagesContext } from '@/app/context/StudentMessage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/app/context/AuthContext';
-import { useRouter } from 'next/navigation';
 import Loading from '@/app/loading';
-
-interface Message {
-    id: string;
-    type: 'announcement' | 'personal' | 'system' | 'achievement';
-    title: string;
-    content: string;
-    sender: string;
-    senderAvatar?: string;
-    timestamp: string;
-    isRead: boolean;
-    priority: 'low' | 'medium' | 'high';
-}
+import { type StudentMessage } from '@/types/message';
+import MessageActionDropdown from '@/app/components/studentMessageActionDropdown';
+import dayjs from 'dayjs';
 
 const messageTypeConfig = {
     announcement: {
@@ -98,42 +75,57 @@ const messageTypeConfig = {
         textColor: 'text-gray-700',
         iconColor: 'text-gray-600',
     },
+    achievement: {
+        icon: Award,
+        color: 'yellow',
+        label: '成果',
+        bgColor: 'bg-yellow-50',
+        textColor: 'text-yellow-700',
+        iconColor: 'text-yellow-600',
+    },
 };
 
 export default function MessagesPage() {
-    const [isLoading, setIsLoading] = useState(false);
+    const {
+        messages,
+        adminName,
+        isLoading,
+        isError,
+        refetch,
+        markAsRead,
+        toggleReadStatus,
+        deleteMessage,
+    } = useStudentMessagesContext();
     const [selectedType, setSelectedType] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+    const [selectedMessage, setSelectedMessage] = useState<StudentMessage | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isScrollable, setIsScrollable] = useState(false);
     const { loading } = useAuth();
-    const { messages, loading: messagesLoading } = useStudentMessagesContext();
     const unreadCount = messages.filter((msg) => !msg.isRead).length;
-    const router = useRouter();
 
     const filteredMessages = messages.filter((message) => {
-        const matchesType = selectedType === 'all' || message.type === selectedType;
+        const matchesType = selectedType === 'all' || message.messageType === selectedType;
         const matchesSearch =
-            message.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             message.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            message.sender.toLowerCase().includes(searchQuery.toLowerCase());
+            message.senderId.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesType && matchesSearch;
     });
 
-    const markAsRead = (messageId: string) => {
-        setMessages((prev) =>
-            prev.map((msg) => (msg.id === messageId ? { ...msg, isRead: true } : msg))
-        );
-    };
+    useEffect(() => {
+        const checkScrollable = () => {
+            const scrollHeight = document.documentElement.scrollHeight;
+            const clientHeight = document.documentElement.clientHeight;
+            setIsScrollable(scrollHeight > clientHeight);
+        };
 
-    const deleteMessage = (messageId: string) => {
-        setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
-    };
+        checkScrollable();
+        window.addEventListener('resize', checkScrollable);
 
-    const toggleReadStatus = (messageId: string) => {
-        setMessages((prev) =>
-            prev.map((msg) => (msg.id === messageId ? { ...msg, isRead: !msg.isRead } : msg))
-        );
-    };
+        return () => {
+            window.removeEventListener('resize', checkScrollable);
+        };
+    }, [messages, adminName, searchQuery, selectedType]);
 
     const getPriorityColor = (priority: string) => {
         switch (priority) {
@@ -141,17 +133,72 @@ export default function MessagesPage() {
                 return 'border-l-red-500';
             case 'medium':
                 return 'border-l-yellow-500';
+            case 'low':
+                return 'border-l-green-500';
             default:
                 return 'border-l-gray-300';
         }
     };
 
-    if (loading || messagesLoading) {
+    const truncateContent = (content: string) => {
+        if (content.length > 30) {
+            return content.slice(0, 30) + '...';
+        }
+        return content;
+    };
+
+    // 詳細ダイアログを開く関数
+    const handleOpenDialog = (message: StudentMessage) => {
+        setSelectedMessage(message);
+        setIsDialogOpen(true);
+        if (!message.isRead && markAsRead) {
+            markAsRead(message.id);
+        }
+    };
+
+    // エラーが発生している場合のエラー表示
+    if (isError) {
+        return (
+            <div className="min-h-screen bg-gray-50">
+                <StudentNavigation />
+                <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <Card className="border-red-200 bg-red-50">
+                        <CardContent className="p-6">
+                            <div className="flex items-center space-x-3">
+                                <AlertCircle className="w-6 h-6 text-red-600" />
+                                <div>
+                                    <h3 className="text-lg font-medium text-red-900">
+                                        メッセージの取得に失敗しました
+                                    </h3>
+                                    <p className="text-red-700 mt-1">
+                                        {isError?.message || 'エラーが発生しました'}
+                                    </p>
+                                    <Button
+                                        onClick={() => refetch()}
+                                        variant="outline"
+                                        className="mt-3"
+                                    >
+                                        再試行
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </main>
+            </div>
+        );
+    }
+
+    if (isLoading || loading) {
         return <Loading />;
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div
+            className={`min-h-screen bg-gray-50 ${
+                isScrollable ? 'overflow-y-auto' : 'overflow-y-scroll'
+            }`}
+        >
             <StudentNavigation />
             <PageTransition>
                 <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -166,7 +213,7 @@ export default function MessagesPage() {
                                         transition={{ delay: 0.2, duration: 0.6 }}
                                         className="text-3xl font-bold text-gray-900 mb-2"
                                     >
-                                        メッセージ
+                                        お知らせ・メッセージ
                                     </motion.h1>
                                     <motion.p
                                         initial={{ opacity: 0 }}
@@ -253,8 +300,11 @@ export default function MessagesPage() {
                         <StaggerContainer>
                             <div className="space-y-4">
                                 <AnimatePresence>
-                                    {filteredMessages.map((message, index) => {
-                                        const config = messageTypeConfig[message.type];
+                                    {filteredMessages.map((message) => {
+                                        const config =
+                                            messageTypeConfig[
+                                                message.messageType as keyof typeof messageTypeConfig
+                                            ] || messageTypeConfig.system;
                                         const Icon = config.icon;
 
                                         return (
@@ -269,8 +319,8 @@ export default function MessagesPage() {
                                                 transition={{ duration: 0.3, ease: 'easeOut' }}
                                             >
                                                 <Card
-                                                    className={`cursor-pointer transition-all duration-300 hover:shadow-lg border-l-4 ${getPriorityColor(
-                                                        message.priority
+                                                    className={`transition-all duration-300 hover:shadow-lg border-l-4 ${getPriorityColor(
+                                                        message.messagePriority
                                                     )} ${!message.isRead ? 'bg-blue-50/30' : ''}`}
                                                 >
                                                     <CardContent className="p-6">
@@ -321,48 +371,49 @@ export default function MessagesPage() {
                                                                         </Badge>
                                                                     </div>
 
-                                                                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                                                                        {message.content}
+                                                                    <p className="text-sm text-gray-700">
+                                                                        {truncateContent(
+                                                                            message.content
+                                                                        )}
                                                                     </p>
 
                                                                     <div className="flex items-center space-x-4 text-xs text-gray-500">
                                                                         <div className="flex items-center space-x-1">
-                                                                            {message.senderAvatar ? (
-                                                                                <Avatar className="w-4 h-4">
-                                                                                    <AvatarImage
-                                                                                        src={
-                                                                                            message.senderAvatar ||
-                                                                                            '/placeholder.svg'
-                                                                                        }
-                                                                                        alt={
-                                                                                            message.sender
-                                                                                        }
-                                                                                    />
-                                                                                    <AvatarFallback className="text-xs">
-                                                                                        {message.sender.charAt(
-                                                                                            0
-                                                                                        )}
-                                                                                    </AvatarFallback>
-                                                                                </Avatar>
-                                                                            ) : (
-                                                                                <User className="w-4 h-4" />
-                                                                            )}
-                                                                            <span>
-                                                                                {message.sender}
-                                                                            </span>
+                                                                            <User className="w-4 h-4" />
+                                                                            <span>{adminName}</span>
                                                                         </div>
                                                                         <div className="flex items-center space-x-1">
                                                                             <Clock className="w-4 h-4" />
                                                                             <span>
-                                                                                {message.timestamp}
+                                                                                {dayjs(
+                                                                                    message.sentAt
+                                                                                ).format(
+                                                                                    'YYYY / MM / DD HH:mm:ss'
+                                                                                )}
                                                                             </span>
                                                                         </div>
+                                                                        {message.scheduledAt && (
+                                                                            <div className="flex items-center space-x-1">
+                                                                                <Clock className="w-4 h-4" />
+                                                                                <span>
+                                                                                    予定:{' '}
+                                                                                    {dayjs(
+                                                                                        message.scheduledAt
+                                                                                    ).format(
+                                                                                        'YYYY / MM / DD HH:mm:ss'
+                                                                                    )}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             </div>
 
                                                             <div className="flex items-center space-x-2">
-                                                                <Dialog>
+                                                                <Dialog
+                                                                    open={isDialogOpen}
+                                                                    onOpenChange={setIsDialogOpen}
+                                                                >
                                                                     <DialogTrigger asChild>
                                                                         <motion.div
                                                                             whileHover={{
@@ -375,146 +426,74 @@ export default function MessagesPage() {
                                                                             <Button
                                                                                 variant="ghost"
                                                                                 size="sm"
-                                                                                onClick={() => {
-                                                                                    setSelectedMessage(
+                                                                                className="cursor-pointer"
+                                                                                onClick={() =>
+                                                                                    handleOpenDialog(
                                                                                         message
-                                                                                    );
-                                                                                    if (
-                                                                                        !message.isRead
-                                                                                    ) {
-                                                                                        markAsRead(
-                                                                                            message.id
-                                                                                        );
-                                                                                    }
-                                                                                }}
+                                                                                    )
+                                                                                }
                                                                             >
                                                                                 詳細を見る
                                                                             </Button>
                                                                         </motion.div>
                                                                     </DialogTrigger>
                                                                     <DialogContent className="max-w-2xl">
-                                                                        <DialogHeader>
-                                                                            <div className="flex items-center space-x-3 mb-2">
-                                                                                <div
-                                                                                    className={`w-10 h-10 rounded-full flex items-center justify-center ${config.bgColor}`}
-                                                                                >
-                                                                                    <Icon
-                                                                                        className={`w-5 h-5 ${config.iconColor}`}
-                                                                                    />
-                                                                                </div>
-                                                                                <div>
-                                                                                    <DialogTitle className="text-xl">
+                                                                        {selectedMessage && (
+                                                                            <>
+                                                                                <DialogHeader>
+                                                                                    <div className="flex items-center space-x-3 mb-2">
+                                                                                        <div
+                                                                                            className={`w-10 h-10 rounded-full flex items-center justify-center ${config.bgColor}`}
+                                                                                        >
+                                                                                            <Icon
+                                                                                                className={`w-5 h-5 ${config.iconColor}`}
+                                                                                            />
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <DialogTitle className="text-xl">
+                                                                                                {
+                                                                                                    message.title
+                                                                                                }
+                                                                                            </DialogTitle>
+                                                                                            <DialogDescription className="flex items-center space-x-4 mt-1">
+                                                                                                <span>
+                                                                                                    {
+                                                                                                        adminName
+                                                                                                    }
+                                                                                                </span>
+                                                                                                <span>
+                                                                                                    •
+                                                                                                </span>
+                                                                                                <span>
+                                                                                                    {dayjs(
+                                                                                                        selectedMessage.sentAt
+                                                                                                    ).format(
+                                                                                                        'YYYY / MM / DD HH:mm:ss'
+                                                                                                    )}
+                                                                                                </span>
+                                                                                            </DialogDescription>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </DialogHeader>
+                                                                                <div className="mt-4">
+                                                                                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                                                                                         {
-                                                                                            message.title
+                                                                                            selectedMessage.content
                                                                                         }
-                                                                                    </DialogTitle>
-                                                                                    <DialogDescription className="flex items-center space-x-4 mt-1">
-                                                                                        <span>
-                                                                                            {
-                                                                                                message.sender
-                                                                                            }
-                                                                                        </span>
-                                                                                        <span>
-                                                                                            •
-                                                                                        </span>
-                                                                                        <span>
-                                                                                            {
-                                                                                                message.timestamp
-                                                                                            }
-                                                                                        </span>
-                                                                                    </DialogDescription>
+                                                                                    </p>
                                                                                 </div>
-                                                                            </div>
-                                                                        </DialogHeader>
-                                                                        <div className="mt-4">
-                                                                            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                                                                                {message.content}
-                                                                            </p>
-                                                                        </div>
+                                                                            </>
+                                                                        )}
                                                                     </DialogContent>
                                                                 </Dialog>
-
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild>
-                                                                        <motion.div
-                                                                            whileHover={{
-                                                                                scale: 1.02,
-                                                                            }}
-                                                                            whileTap={{
-                                                                                scale: 0.98,
-                                                                            }}
-                                                                        >
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="sm"
-                                                                            >
-                                                                                <MoreVertical className="w-4 h-4" />
-                                                                            </Button>
-                                                                        </motion.div>
-                                                                    </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="end">
-                                                                        <DropdownMenuItem
-                                                                            onClick={() =>
-                                                                                toggleReadStatus(
-                                                                                    message.id
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            {message.isRead ? (
-                                                                                <>
-                                                                                    <EyeOff className="w-4 h-4 mr-2" />
-                                                                                    未読にする
-                                                                                </>
-                                                                            ) : (
-                                                                                <>
-                                                                                    <Eye className="w-4 h-4 mr-2" />
-                                                                                    既読にする
-                                                                                </>
-                                                                            )}
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuSeparator />
-                                                                        <AlertDialog>
-                                                                            <AlertDialogTrigger
-                                                                                asChild
-                                                                            >
-                                                                                <DropdownMenuItem
-                                                                                    onSelect={(e) =>
-                                                                                        e.preventDefault()
-                                                                                    }
-                                                                                    className="text-red-600"
-                                                                                >
-                                                                                    <Trash2 className="w-4 h-4 mr-2" />
-                                                                                    削除
-                                                                                </DropdownMenuItem>
-                                                                            </AlertDialogTrigger>
-                                                                            <AlertDialogContent>
-                                                                                <AlertDialogHeader>
-                                                                                    <AlertDialogTitle>
-                                                                                        メッセージを削除しますか？
-                                                                                    </AlertDialogTitle>
-                                                                                    <AlertDialogDescription>
-                                                                                        この操作は取り消すことができません。メッセージが完全に削除されます。
-                                                                                    </AlertDialogDescription>
-                                                                                </AlertDialogHeader>
-                                                                                <AlertDialogFooter>
-                                                                                    <AlertDialogCancel>
-                                                                                        キャンセル
-                                                                                    </AlertDialogCancel>
-                                                                                    <AlertDialogAction
-                                                                                        onClick={() =>
-                                                                                            deleteMessage(
-                                                                                                message.id
-                                                                                            )
-                                                                                        }
-                                                                                        className="bg-red-600 hover:bg-red-700"
-                                                                                    >
-                                                                                        削除
-                                                                                    </AlertDialogAction>
-                                                                                </AlertDialogFooter>
-                                                                            </AlertDialogContent>
-                                                                        </AlertDialog>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
+                                                                <MessageActionDropdown
+                                                                    messageId={message.id}
+                                                                    isRead={message.isRead}
+                                                                    toggleReadStatus={
+                                                                        toggleReadStatus
+                                                                    }
+                                                                    deleteMessage={deleteMessage}
+                                                                />
                                                             </div>
                                                         </div>
                                                     </CardContent>
@@ -569,14 +548,15 @@ export default function MessagesPage() {
                                             {
                                                 label: 'お知らせ',
                                                 value: messages.filter(
-                                                    (m) => m.type === 'announcement'
+                                                    (m) => m.messageType === 'announcement'
                                                 ).length,
                                                 color: 'green',
                                             },
                                             {
                                                 label: '個人メッセージ',
-                                                value: messages.filter((m) => m.type === 'personal')
-                                                    .length,
+                                                value: messages.filter(
+                                                    (m) => m.messageType === 'personal'
+                                                ).length,
                                                 color: 'purple',
                                             },
                                         ].map((stat, index) => (

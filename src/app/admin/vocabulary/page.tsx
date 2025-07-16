@@ -36,7 +36,7 @@ export default function AdminVocabulary() {
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [sortField, setSortField] = useState<string>('word');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [selectedVocabId, setSelectedVocabId] = useState<string | null>(null);
+    const [isScrollable, setIsScrollable] = useState(false);
     const { words, isLoading, isError, refetch } = useWords();
 
     // フィルタリングと並び替え
@@ -69,6 +69,21 @@ export default function AdminVocabulary() {
             }
             return 0;
         });
+
+    useEffect(() => {
+        const checkScrollable = () => {
+            const scrollHeight = document.documentElement.scrollHeight;
+            const clientHeight = document.documentElement.clientHeight;
+            setIsScrollable(scrollHeight > clientHeight);
+        };
+
+        checkScrollable();
+        window.addEventListener('resize', checkScrollable);
+
+        return () => {
+            window.removeEventListener('resize', checkScrollable);
+        };
+    }, [words, searchQuery, selectedLevel, sortField, sortDirection]);
 
     const handleSort = (field: string) => {
         if (sortField === field) {
@@ -140,7 +155,11 @@ export default function AdminVocabulary() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div
+            className={`min-h-screen bg-gray-50 ${
+                isScrollable ? 'overflow-y-auto' : 'overflow-y-scroll'
+            }`}
+        >
             <AdminNavigation currentPage="vocabulary" />
             <PageTransition>
                 <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

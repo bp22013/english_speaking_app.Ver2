@@ -1,6 +1,17 @@
+/* 管理者のメッセージ表示ページ */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from 'react';
+import {
+    useState,
+    JSXElementConstructor,
+    Key,
+    ReactElement,
+    ReactNode,
+    ReactPortal,
+    useEffect,
+} from 'react';
 import { useAdminMessagesContext } from '@/app/context/AdminMessagesContext';
 import { useAdminSession } from '@/app/context/AdminAuthContext';
 import { DeleteMessageModal } from '@/app/components/DeleteMessageModal';
@@ -10,14 +21,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     Dialog,
     DialogContent,
@@ -31,9 +34,6 @@ import {
     Search,
     Filter,
     Plus,
-    MoreVertical,
-    Edit,
-    Trash2,
     Send,
     Clock,
     Users,
@@ -54,6 +54,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { client } from '@/lib/HonoClient';
+import dayjs from 'dayjs';
+import Loading from '@/app/loading';
+import { AdminMessageActionDropdown } from '@/app/components/AdminMessageActionDropdown';
 
 // AdminMessagesContextの型を使用
 type AdminMessage = ReturnType<typeof useAdminMessagesContext>['messages'][0];
@@ -66,13 +69,10 @@ export default function AdminMessages() {
     const [selectedStatus, setSelectedStatus] = useState<string>('all');
     const [selectedMessage, setSelectedMessage] = useState<AdminMessage | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
-
-    // 削除モーダル用の状態
+    const [isScrollable, setIsScrollable] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [messageToDelete, setMessageToDelete] = useState<AdminMessage | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-
-    // 編集モーダル用の状態
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [messageToEdit, setMessageToEdit] = useState<AdminMessage | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -92,6 +92,21 @@ export default function AdminMessages() {
         const matchesStatus = selectedStatus === 'all' || status === selectedStatus;
         return matchesSearch && matchesType && matchesStatus;
     });
+
+    useEffect(() => {
+        const checkScrollable = () => {
+            const scrollHeight = document.documentElement.scrollHeight;
+            const clientHeight = document.documentElement.clientHeight;
+            setIsScrollable(scrollHeight > clientHeight);
+        };
+
+        checkScrollable();
+        window.addEventListener('resize', checkScrollable);
+
+        return () => {
+            window.removeEventListener('resize', checkScrollable);
+        };
+    }, [messages, searchQuery, selectedType, selectedStatus]);
 
     const getTypeConfig = (type: string) => {
         switch (type) {
@@ -232,8 +247,16 @@ export default function AdminMessages() {
         );
     };
 
+    if (isLoading) {
+        return <Loading />;
+    }
+
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div
+            className={`min-h-screen bg-gray-50 ${
+                isScrollable ? 'overflow-y-auto' : 'overflow-y-scroll'
+            }`}
+        >
             <AdminNavigation currentPage="messages" />
             <PageTransition>
                 <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -319,7 +342,7 @@ export default function AdminMessages() {
                                         icon: Eye,
                                         color: 'blue',
                                     },
-                                ].map((stat, index) => {
+                                ].map((stat) => {
                                     const Icon = stat.icon;
                                     return (
                                         <motion.div
@@ -538,79 +561,32 @@ export default function AdminMessages() {
                                                                             <Clock className="w-4 h-4" />
                                                                             <span>
                                                                                 {message.scheduledAt
-                                                                                    ? `予約: ${new Date(
+                                                                                    ? `予約: ${dayjs(
                                                                                           message.scheduledAt
-                                                                                      ).toLocaleString(
-                                                                                          'ja-JP'
+                                                                                      ).format(
+                                                                                          'YYYY / MM / DD HH:mm:ss'
                                                                                       )}`
-                                                                                    : `送信: ${new Date(
+                                                                                    : `送信: ${dayjs(
                                                                                           message.sentAt
-                                                                                      ).toLocaleString(
-                                                                                          'ja-JP'
+                                                                                      ).format(
+                                                                                          'YYYY / MM / DD HH:mm:ss'
                                                                                       )}`}
                                                                             </span>
                                                                         </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
-
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="cursor-pointer"
-                                                                        onClick={(e) =>
-                                                                            e.stopPropagation()
-                                                                        }
-                                                                    >
-                                                                        <MoreVertical className="h-4 w-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuLabel>
-                                                                        アクション
-                                                                    </DropdownMenuLabel>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleViewDetails(
-                                                                                message
-                                                                            );
-                                                                        }}
-                                                                        className="cursor-pointer"
-                                                                    >
-                                                                        <Eye className="mr-2 h-4 w-4" />
-                                                                        詳細を見る
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleEditMessage(
-                                                                                message
-                                                                            );
-                                                                        }}
-                                                                        className="cursor-pointer"
-                                                                    >
-                                                                        <Edit className="mr-2 h-4 w-4" />
-                                                                        編集
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleDeleteMessage(
-                                                                                message
-                                                                            );
-                                                                        }}
-                                                                        className="text-red-600 cursor-pointer"
-                                                                    >
-                                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                                        削除
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
+                                                            <AdminMessageActionDropdown
+                                                                onView={() =>
+                                                                    handleViewDetails(message)
+                                                                }
+                                                                onEdit={() =>
+                                                                    handleEditMessage(message)
+                                                                }
+                                                                onDelete={() =>
+                                                                    handleDeleteMessage(message)
+                                                                }
+                                                            />
                                                         </div>
                                                     </motion.div>
                                                 );
@@ -698,8 +674,8 @@ export default function AdminMessages() {
                                             })()}
                                         </div>
                                         <span className="text-sm text-gray-500">
-                                            {new Date(selectedMessage.sentAt).toLocaleString(
-                                                'ja-JP'
+                                            {dayjs(selectedMessage.sentAt).format(
+                                                'YYYY / MM / DD HH:mm:ss'
                                             )}
                                         </span>
                                     </div>
@@ -738,9 +714,9 @@ export default function AdminMessages() {
                                             <div className="col-span-2">
                                                 <p className="text-sm text-gray-500">送信予定</p>
                                                 <p className="font-medium">
-                                                    {new Date(
-                                                        selectedMessage.scheduledAt
-                                                    ).toLocaleString('ja-JP')}
+                                                    {dayjs(selectedMessage.scheduledAt).format(
+                                                        'YYYY / MM / DD'
+                                                    )}
                                                 </p>
                                             </div>
                                         )}

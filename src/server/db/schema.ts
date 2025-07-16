@@ -71,19 +71,20 @@ export const admins = pgTable('admins', {
     lastPasswordChangeAt: timestamp('last_password_change_at', { withTimezone: true }),
 });
 
-// 管理者からのメッセージ
+// 管理者からのメッセージ（生徒側）
 export const messages = pgTable('messages', {
     id: text('id')
         .primaryKey()
         .$defaultFn(() => crypto.randomUUID()),
     studentId: text('student_id')
-        .references(() => students.id)
+        .references(() => students.studentId)
         .notNull(),
     senderId: text('sender_id')
         .references(() => admins.id)
         .notNull(),
     messageType: text('message_type'),
     messagePriority: text('message_priority'),
+    title: text('title'),
     content: text('content'),
     isRead: boolean('is_read'),
     sentAt: timestamp('sent_at', { withTimezone: true }),

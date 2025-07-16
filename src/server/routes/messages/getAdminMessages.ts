@@ -22,6 +22,7 @@ export const getAdminMessages = new Hono().get('/getAdminMessages', async (c) =>
                 studentId: messages.studentId,
                 studentName: students.name,
                 studentGrade: students.grade,
+                title: messages.title,
                 content: messages.content,
                 messageType: messages.messageType,
                 messagePriority: messages.messagePriority,
@@ -36,34 +37,31 @@ export const getAdminMessages = new Hono().get('/getAdminMessages', async (c) =>
             .orderBy(desc(messages.sentAt));
 
         // 同じ内容・タイプ・優先度・送信時間のメッセージをグループ化
-        const groupedMessages = messageList.reduce(
-            (acc, message) => {
-                const key = `${message.content}-${message.messageType}-${message.messagePriority}-${message.sentAt}-${message.scheduledAt}`;
+        const groupedMessages = messageList.reduce((acc, message) => {
+            const key = `${message.content}-${message.messageType}-${message.messagePriority}-${message.sentAt}-${message.scheduledAt}`;
 
-                if (!acc[key]) {
-                    acc[key] = {
-                        ...message,
-                        recipients: [],
-                        totalRecipients: 0,
-                        readCount: 0,
-                    };
-                }
+            if (!acc[key]) {
+                acc[key] = {
+                    ...message,
+                    recipients: [],
+                    totalRecipients: 0,
+                    readCount: 0,
+                };
+            }
 
-                acc[key].recipients.push({
-                    studentId: message.studentId,
-                    studentName: message.studentName,
-                    studentGrade: message.studentGrade,
-                    isRead: message.isRead,
-                });
-                acc[key].totalRecipients++;
-                if (message.isRead) {
-                    acc[key].readCount++;
-                }
+            acc[key].recipients.push({
+                studentId: message.studentId,
+                studentName: message.studentName,
+                studentGrade: message.studentGrade,
+                isRead: message.isRead,
+            });
+            acc[key].totalRecipients++;
+            if (message.isRead) {
+                acc[key].readCount++;
+            }
 
-                return acc;
-            },
-            {} as Record<string, any>
-        );
+            return acc;
+        }, {} as Record<string, any>);
 
         const groupedMessageList = Object.values(groupedMessages);
 

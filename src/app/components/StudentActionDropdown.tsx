@@ -1,3 +1,5 @@
+/* 管理者の生徒の情報に関するドロップダウンコンポーネント */
+
 'use client';
 
 import { useState } from 'react';
@@ -90,7 +92,7 @@ export const StudentActionDropdown = ({
                 open={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={() => {
-                    onDelete(studentId); // 🔸渡された関数を実行
+                    onDelete(studentId);
                     setIsDeleteModalOpen(false);
                 }}
                 studentName={studentName}

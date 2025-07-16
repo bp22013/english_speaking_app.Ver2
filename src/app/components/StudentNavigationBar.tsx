@@ -14,6 +14,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useStudentMessagesContext } from '@/app/context/StudentMessage';
 import { BookOpen, Home, Dumbbell, Settings, LogOut, User } from 'lucide-react';
 import { GoBell } from 'react-icons/go';
 import { motion, MotionConfig } from 'framer-motion';
@@ -22,10 +23,12 @@ import { useAuth } from '../context/AuthContext';
 import Loading from '../loading';
 
 export function StudentNavigation() {
+    const { messages } = useStudentMessagesContext();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const router = useRouter();
     const pathname = usePathname();
+    const unreadCount = messages.filter((msg) => !msg.isRead).length;
     const { user, loading } = useAuth();
 
     const navigationItems = [
@@ -112,7 +115,7 @@ export function StudentNavigation() {
                                         )
                                     }
                                 >
-                                    <Badge badgeContent={3} color="error">
+                                    <Badge badgeContent={unreadCount} color="error">
                                         <GoBell className="w-6 h-6 text-gray-700" />
                                     </Badge>
                                 </motion.button>

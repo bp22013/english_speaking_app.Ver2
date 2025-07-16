@@ -1,10 +1,13 @@
 /* メッセージ関連の型定義 */
 
+export type MessageType = 'announcement' | 'personal' | 'reminder';
+
 export interface AdminMessage {
     id: string;
     studentId: string;
     studentName: string;
     studentGrade: string;
+    title: string;
     content: string;
     messageType: string;
     messagePriority: string;
@@ -26,6 +29,7 @@ export interface StudentMessage {
     id: string;
     studentId: string;
     senderId: string;
+    title: string;
     content: string;
     messageType: string;
     messagePriority: string;

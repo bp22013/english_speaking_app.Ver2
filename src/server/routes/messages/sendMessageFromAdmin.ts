@@ -8,8 +8,12 @@ import { students } from '../../db/schema';
 
 export const sendMessageFromAdmin = new Hono().post('/sendMessageFromAdmin', async (c) => {
     try {
+        const body = await c.req.json();
+        console.log('Request Body:', body);
+
         const {
             senderId,
+            title,
             content,
             messageType,
             messagePriority,
@@ -17,13 +21,14 @@ export const sendMessageFromAdmin = new Hono().post('/sendMessageFromAdmin', asy
             sendToAll,
             selectedStudentIds = [],
             selectedGrades = [],
-        } = await c.req.json();
+        } = body;
 
         const now = new Date();
         let targetStudentIds: string[] = [];
 
         if (sendToAll) {
             const allStudents = await db.select({ studentId: students.studentId }).from(students);
+            console.log('All Students:', allStudents);
             targetStudentIds = allStudents.map((s) => s.studentId);
         } else {
             const studentsByGrade = selectedGrades.length
@@ -40,11 +45,14 @@ export const sendMessageFromAdmin = new Hono().post('/sendMessageFromAdmin', asy
                       .where(inArray(students.studentId, selectedStudentIds))
                 : [];
 
-            const combined = [...studentsByGrade, ...studentsById];
+            console.log('Students by Grade:', studentsByGrade);
+            console.log('Students by ID:', studentsById);
 
-            // 重複除外
+            const combined = [...studentsByGrade, ...studentsById];
             targetStudentIds = Array.from(new Set(combined.map((s) => s.studentId)));
         }
+
+        console.log('Target Student IDs:', targetStudentIds);
 
         if (targetStudentIds.length === 0) {
             return c.json({ flg: false, message: '送信対象の生徒が存在しません' }, 400);
@@ -55,6 +63,7 @@ export const sendMessageFromAdmin = new Hono().post('/sendMessageFromAdmin', asy
                 id: crypto.randomUUID(),
                 studentId,
                 senderId,
+                title,
                 content,
                 messageType: messageType || null,
                 messagePriority: messagePriority || null,

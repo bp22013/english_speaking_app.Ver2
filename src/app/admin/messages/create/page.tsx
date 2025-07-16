@@ -54,6 +54,7 @@ import { useStudents } from '@/app/hooks/useStudents';
 import { client } from '@/lib/HonoClient';
 import toast from 'react-hot-toast';
 import Loading from '@/app/loading';
+import { type MessageType } from '@/types/message';
 
 // 生徒データの型定義
 interface Student {
@@ -66,21 +67,15 @@ interface Student {
     isActive: boolean;
 }
 
-// メッセージタイプの定義
-type MessageType = 'announcement' | 'personal' | 'reminder';
-
 export default function AdminMessageCreate() {
     const router = useRouter();
     const { user } = useAdminSession();
     const { students, isLoading } = useStudents();
-    const { refetch } = useAdminMessagesContext();
+    const { refetch: adminRefetch } = useAdminMessagesContext();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [isScrollable, setIsScrollable] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-
-    useEffect(() => {
-        console.log('🔍 AdminMessageCreate mounted');
-    }, []);
 
     // 学年の選択肢
     const grades = ['中学1年生', '中学2年生', '中学3年生', '高校1年生', '高校2年生', '高校3年生'];
@@ -114,6 +109,22 @@ export default function AdminMessageCreate() {
     const selectedStudents = watch('selectedStudents') ?? [];
     const selectedGrades = watch('selectedGrades') ?? [];
     const sendToAll = watch('sendToAll');
+
+    // スクロールチェック
+    useEffect(() => {
+        const checkScrollable = () => {
+            const scrollHeight = document.documentElement.scrollHeight;
+            const clientHeight = document.documentElement.clientHeight;
+            setIsScrollable(scrollHeight > clientHeight);
+        };
+
+        checkScrollable();
+        window.addEventListener('resize', checkScrollable);
+
+        return () => {
+            window.removeEventListener('resize', checkScrollable);
+        };
+    }, [sendToAll, students, content]);
 
     // フィルタリングされた生徒リスト
     const filteredStudents = students.filter(
@@ -171,12 +182,13 @@ export default function AdminMessageCreate() {
                     const res = await client.api.messages.sendMessageFromAdmin.$post({
                         json: {
                             senderId: user?.id,
+                            title: data.title,
                             content: data.content,
                             messageType: data.type,
                             messagePriority: data.priority,
                             scheduledAt: data.scheduledAt,
                             sendToAll: data.sendToAll,
-                            selectedStudents: data.selectedStudents,
+                            selectedStudentIds: data.selectedStudents,
                             selectedGrades: data.selectedGrades,
                         },
                     });
@@ -185,7 +197,7 @@ export default function AdminMessageCreate() {
 
                     if (responceData.flg) {
                         resolve(responceData.message);
-                        await refetch(); // メッセージリストを更新
+                        await adminRefetch();
                         router.push('/admin/messages');
                     } else {
                         reject(responceData.message);
@@ -269,7 +281,11 @@ export default function AdminMessageCreate() {
     }
 
     return (
-        <div className={`min-h-screen bg-gray-50 ${sendToAll ? 'overflow-y-scroll' : ''}`}>
+        <div
+            className={`min-h-screen bg-gray-50 ${
+                isScrollable ? 'overflow-y-auto' : 'overflow-y-hidden'
+            }`}
+        >
             <AdminNavigation currentPage="messages" />
             <PageTransition>
                 <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

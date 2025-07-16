@@ -1,28 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* 管理者メッセージのコンテキスト */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useAdminMessages } from '@/app/hooks/useAdminMessages';
-
-// メッセージの型定義
-export interface AdminMessage {
-    senderId: string | undefined;
-    recipients: any;
-    totalRecipients: any;
-    readCount: any;
-    id: string;
-    studentId: string;
-    studentName: string;
-    studentGrade: string;
-    content: string;
-    messageType: string;
-    messagePriority: string;
-    isRead: boolean;
-    sentAt: string;
-    scheduledAt: string | null;
-}
+import type { AdminMessage } from '@/types/message';
 
 // コンテキストの型定義
 interface AdminMessagesContextType {

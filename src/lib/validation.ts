@@ -126,17 +126,13 @@ export type AdminProfileUpdateFormData = z.infer<typeof adminProfileUpdateValida
 // 管理者パスワード変更のバリデーション
 export const adminPasswordChangeValidation = z
     .object({
-        currentPassword: z
-            .string()
-            .nonempty('現在のパスワードは必須です'),
+        currentPassword: z.string().nonempty('現在のパスワードは必須です'),
         newPassword: z
             .string()
             .nonempty('新しいパスワードは必須です')
             .min(8, 'パスワードは8文字以上で入力してください')
             .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, '大文字・小文字・数字を含めてください'),
-        confirmPassword: z
-            .string()
-            .nonempty('パスワードの確認は必須です'),
+        confirmPassword: z.string().nonempty('パスワードの確認は必須です'),
     })
     .refine((data) => data.newPassword === data.confirmPassword, {
         path: ['confirmPassword'],
@@ -144,3 +140,26 @@ export const adminPasswordChangeValidation = z
     });
 
 export type AdminPasswordChangeFormData = z.infer<typeof adminPasswordChangeValidation>;
+
+// 生徒のパスワード変更用のバリデーションスキーマ
+export const studentPasswordChangeValidation = z
+    .object({
+        currentPassword: z.string().min(1, '現在のパスワードを入力してください'),
+
+        newPassword: z
+            .string()
+            .min(8, 'パスワードは8文字以上である必要があります')
+            .max(100, 'パスワードは100文字以下である必要があります')
+            .regex(
+                /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+                'パスワードには大文字、小文字、数字を含める必要があります'
+            ),
+
+        confirmPassword: z.string().min(1, 'パスワードの確認を入力してください'),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+        message: 'パスワードが一致しません',
+        path: ['confirmPassword'],
+    });
+
+export type studentPasswordChangeFormData = z.infer<typeof studentPasswordChangeValidation>;

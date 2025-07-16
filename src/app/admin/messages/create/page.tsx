@@ -54,18 +54,8 @@ import { useStudents } from '@/app/hooks/useStudents';
 import { client } from '@/lib/HonoClient';
 import toast from 'react-hot-toast';
 import Loading from '@/app/loading';
-import { type MessageType } from '@/types/message';
-
-// 生徒データの型定義
-interface Student {
-    studentId: string;
-    name: string;
-    grade: string;
-    avatar?: string;
-    lastLoginAt: string;
-    registeredAt: string;
-    isActive: boolean;
-}
+import type { MessageType } from '@/types/message';
+import type { Student } from '@/types/student';
 
 export default function AdminMessageCreate() {
     const router = useRouter();

@@ -47,16 +47,7 @@ import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
 import { StudentActionDropdown } from '@/app/components/StudentActionDropdown';
 import { StudentEditModal } from '@/app/components/StudentEditModal';
-
-// 生徒データの型定義
-interface Student {
-    studentId: string;
-    name: string;
-    grade: string | null;
-    lastLoginAt: string | null;
-    registeredAt: string | null;
-    isActive: boolean;
-}
+import type { Student } from '@/types/student';
 
 const grades = ['中学1年生', '中学2年生', '中学3年生', '高校1年生', '高校2年生', '高校3年生'];
 

@@ -9,7 +9,6 @@ import { students } from '../../db/schema';
 export const sendMessageFromAdmin = new Hono().post('/sendMessageFromAdmin', async (c) => {
     try {
         const body = await c.req.json();
-        console.log('Request Body:', body);
 
         const {
             senderId,

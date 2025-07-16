@@ -1,4 +1,4 @@
-/* 単語のページ */
+/* 管理者側の単語のページ */
 
 'use client';
 
@@ -21,14 +21,7 @@ import { VocabularyRegisterDialog } from '../../components/VocabularyRegisterMod
 import { client } from '@/lib/HonoClient';
 import Loading from '@/app/loading';
 import toast from 'react-hot-toast';
-
-interface VocabularyItem {
-    id: string;
-    word: string;
-    meaning: string | null;
-    level: number | null;
-    addedAt: string | null;
-}
+import type { VocabularyItem } from '@/types/vocablary';
 
 export default function AdminVocabulary() {
     const [searchQuery, setSearchQuery] = useState('');

@@ -86,22 +86,14 @@ const messageTypeConfig = {
 };
 
 export default function MessagesPage() {
-    const {
-        messages,
-        adminName,
-        isLoading,
-        isError,
-        refetch,
-        markAsRead,
-        toggleReadStatus,
-        deleteMessage,
-    } = useStudentMessagesContext();
+    const { messages, adminName, isLoading, isError, refetch, markAsRead, deleteMessage } =
+        useStudentMessagesContext();
     const [selectedType, setSelectedType] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMessage, setSelectedMessage] = useState<StudentMessage | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isScrollable, setIsScrollable] = useState(false);
-    const { loading } = useAuth();
+    const { loading, user } = useAuth();
     const unreadCount = messages.filter((msg) => !msg.isRead).length;
 
     const filteredMessages = messages.filter((message) => {
@@ -151,8 +143,8 @@ export default function MessagesPage() {
     const handleOpenDialog = (message: StudentMessage) => {
         setSelectedMessage(message);
         setIsDialogOpen(true);
-        if (!message.isRead && markAsRead) {
-            markAsRead(message.id);
+        if (!message.isRead && markAsRead && user) {
+            markAsRead(message.id, user.studentId);
         }
     };
 
@@ -488,10 +480,8 @@ export default function MessagesPage() {
                                                                 </Dialog>
                                                                 <MessageActionDropdown
                                                                     messageId={message.id}
-                                                                    isRead={message.isRead}
-                                                                    toggleReadStatus={
-                                                                        toggleReadStatus
-                                                                    }
+                                                                    senderId={message.senderId}
+                                                                    markAsRead={markAsRead}
                                                                     deleteMessage={deleteMessage}
                                                                 />
                                                             </div>

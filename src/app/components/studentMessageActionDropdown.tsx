@@ -22,21 +22,23 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { MoreVertical, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Eye, MoreVertical, Trash2 } from 'lucide-react';
 
 interface MessageActionDropdownProps {
     messageId: string;
-    isRead: boolean;
-    toggleReadStatus?: (id: string) => void;
-    deleteMessage?: (id: string) => void;
+    senderId: string;
+    markAsRead: (id: string, studentId: string) => void;
+    deleteMessage?: (id: string, senderId: string, studentId: string) => void;
 }
 
 export default function MessageActionDropdown({
     messageId,
-    isRead,
-    toggleReadStatus,
+    senderId,
+    markAsRead,
     deleteMessage,
 }: MessageActionDropdownProps) {
+    const { user } = useAuth();
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -48,20 +50,13 @@ export default function MessageActionDropdown({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                    onClick={() => toggleReadStatus && toggleReadStatus(messageId)}
+                    onClick={() => {
+                        user && markAsRead(messageId, user.studentId);
+                    }}
                     className="text-blue-500 cursor-pointer hover:!bg-blue-100 focus:!text-blue-600 focus:!bg-blue-100"
                 >
-                    {isRead ? (
-                        <>
-                            <EyeOff className="w-4 h-4 mr-2 text-blue-500" />
-                            未読にする
-                        </>
-                    ) : (
-                        <>
-                            <Eye className="w-4 h-4 mr-2 text-blue-500" />
-                            既読にする
-                        </>
-                    )}
+                    <Eye className="mr-2 h-4 w-4 text-blue-500" />
+                    既読にする
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <AlertDialog>
@@ -82,10 +77,16 @@ export default function MessageActionDropdown({
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                            <AlertDialogCancel className="cursor-pointer">
+                                キャンセル
+                            </AlertDialogCancel>
                             <AlertDialogAction
-                                onClick={() => deleteMessage && deleteMessage(messageId)}
-                                className="bg-red-600 hover:bg-red-700"
+                                onClick={() =>
+                                    deleteMessage &&
+                                    user &&
+                                    deleteMessage(messageId, senderId, user.studentId)
+                                }
+                                className="bg-red-600 hover:bg-red-700 cursor-pointer"
                             >
                                 削除
                             </AlertDialogAction>

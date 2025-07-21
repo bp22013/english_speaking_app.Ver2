@@ -26,27 +26,25 @@ import toast from 'react-hot-toast';
 import { redirect } from 'next/navigation';
 import Loading from '@/app/loading';
 import dayjs from 'dayjs';
-import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
+import { useForm, Controller, SubmitHandler } from 'react-hook-form';
+import { updateStudentFormData, updateStudentValidation } from '@/lib/validation';
 import { client } from '@/lib/HonoClient';
-
-interface ProfileForm {
-    name: string;
-    studentId: string;
-    grade: string;
-}
+import { zodResolver } from '@hookform/resolvers/zod';
 
 export default function SettingsPage() {
-    const { loading, user, mutate } = useAuth();
+    const { loading, user } = useAuth();
     const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    const { register, handleSubmit, setValue, watch, reset, control } = useForm<ProfileForm>({
-        defaultValues: {
-            name: '',
-            studentId: '',
-            grade: user?.grade,
-        },
-    });
+    const { register, handleSubmit, setValue, watch, reset, control } =
+        useForm<updateStudentFormData>({
+            resolver: zodResolver(updateStudentValidation),
+            defaultValues: {
+                name: user?.name ?? '',
+                studentId: user?.studentId ?? '',
+                grade: user?.grade ?? '',
+            },
+        });
 
     // userが変更されたときにフォームを更新
     useEffect(() => {
@@ -56,7 +54,7 @@ export default function SettingsPage() {
             setValue('grade', user.grade || '');
         } else {
             toast.error('ユーザー情報を読み込めませんでした');
-            redirect('/admin/dashboard');
+            redirect('/student/dashboard');
         }
     }, [user, setValue]);
 
@@ -64,17 +62,17 @@ export default function SettingsPage() {
     const watchedValues = watch();
 
     // 変更を保存
-    const handleSave = async (data: ProfileForm) => {
+    const handleSave: SubmitHandler<updateStudentFormData> = async (data) => {
         if (!user) {
             toast.error('ユーザー情報が見つかりません');
             return;
         }
 
         await toast.promise(
-            new Promise(async (resolve, reject) => {
+            new Promise<string>(async (resolve, reject) => {
                 setIsSaving(true);
                 try {
-                    const response = await client.api.student.updateProfile.$post({
+                    const response = await client.api.auth.updateStudentProfile.$post({
                         json: {
                             studentId: user.studentId,
                             name: data.name,
@@ -85,7 +83,6 @@ export default function SettingsPage() {
                     const result = await response.json();
 
                     if (result.flg) {
-                        await mutate();
                         resolve('設定を保存しました！');
                     } else {
                         reject(result.message || '設定の保存に失敗しました');
@@ -385,9 +382,7 @@ export default function SettingsPage() {
                                                 </CardTitle>
                                             </CardHeader>
                                             <CardContent className="space-y-2 sm:space-y-3 pt-0">
-                                                <PasswordChangeDialog
-                                                    onPasswordChange={handlePasswordChange}
-                                                />
+                                                <PasswordChangeDialog />
                                                 <motion.div
                                                     initial={{ opacity: 0 }}
                                                     animate={{ opacity: 1 }}

@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,9 +45,11 @@ import {
     type AdminPasswordChangeFormData,
 } from '@/lib/validation';
 import { client } from '@/lib/HonoClient';
+import dayjs from 'dayjs';
+import Loading from '@/app/loading';
 
 export default function AdminSettings() {
-    const { user } = useAdminSession();
+    const { user, loading } = useAdminSession();
     const { students, isLoading: studentsLoading } = useStudents();
     const { words, isLoading: wordsLoading } = useWords();
     const [activeTab, setActiveTab] = useState('profile');
@@ -68,6 +71,7 @@ export default function AdminSettings() {
     // パスワード変更フォーム
     const passwordForm = useForm<AdminPasswordChangeFormData>({
         resolver: zodResolver(adminPasswordChangeValidation),
+        mode: 'onChange',
         defaultValues: {
             currentPassword: '',
             newPassword: '',
@@ -76,7 +80,7 @@ export default function AdminSettings() {
     });
 
     // ユーザー情報が更新されたらフォームの初期値を更新
-    React.useEffect(() => {
+    useEffect(() => {
         if (user) {
             profileForm.reset({
                 name: user.name || '',
@@ -85,6 +89,7 @@ export default function AdminSettings() {
         }
     }, [user, profileForm]);
 
+    // プロフィールを更新するメソッド
     const handleProfileSave: SubmitHandler<AdminProfileUpdateFormData> = async (data) => {
         if (!user?.id) {
             toast.error('ユーザー情報が取得できません');
@@ -100,6 +105,7 @@ export default function AdminSettings() {
 
             if (result.flg) {
                 toast.success('プロフィールを更新しました');
+                window.location.reload();
             } else {
                 toast.error(result.message || 'プロフィールの更新に失敗しました');
             }
@@ -109,6 +115,7 @@ export default function AdminSettings() {
         }
     };
 
+    // パスワードを変更するメソッド
     const handlePasswordChange: SubmitHandler<AdminPasswordChangeFormData> = async (data) => {
         if (!user?.id) {
             toast.error('ユーザー情報が取得できません');
@@ -116,11 +123,9 @@ export default function AdminSettings() {
         }
 
         try {
-            const response = await client.api.auth.updateAdminProfile.$post({
+            const response = await client.api.auth.updateAdminPassword.$post({
                 json: {
-                    adminId: user.id,
-                    name: profileForm.getValues().name,
-                    email: profileForm.getValues().email,
+                    email: user.email,
                     currentPassword: data.currentPassword,
                     newPassword: data.newPassword,
                 },
@@ -185,10 +190,10 @@ export default function AdminSettings() {
                 名前: student.name || '',
                 学年: student.grade || '',
                 登録日: student.registeredAt
-                    ? new Date(student.registeredAt).toLocaleDateString('ja-JP')
+                    ? dayjs(student.registeredAt).format('YYYY/MM/DD')
                     : '',
                 最終ログイン: student.lastLoginAt
-                    ? new Date(student.lastLoginAt).toLocaleDateString('ja-JP')
+                    ? dayjs(student.lastLoginAt).format('YYYY/MM/DD')
                     : '',
             })
         );
@@ -208,10 +213,14 @@ export default function AdminSettings() {
                 単語: word.word || '',
                 意味: word.meaning || '',
                 レベル: word.level || '',
-                追加日: word.addedAt ? new Date(word.addedAt).toLocaleDateString('ja-JP') : '',
+                追加日: word.addedAt ? dayjs(word.addedAt).format('YYYY/MM/DD') : '',
             })
         );
     };
+
+    if (loading) {
+        return <Loading />;
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 overflow-y-scroll">

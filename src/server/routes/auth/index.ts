@@ -5,13 +5,14 @@ import { studentLogin } from './StudentLogin';
 import { studentRegister } from './StudentRegister';
 import { sessionCheck } from './sessionCheck';
 import { getAllStudents } from './getAllStudent';
+import { getAdminSession } from './getAdminSession';
 import { DeleteStudent } from './DeleteStudent';
 import { studentLogout } from './StudentLogout';
 import { hookSession } from './getStudentSession';
-import { updateStudent } from './StudentUpdate';
 import { changeStudentPassword } from './changeStudentPassword';
 import { updateStudentProfile } from './updateStudentProfile';
-import { adminUpdate } from './AdminProfileUpdate';
+import { updateAdminProfile } from './AdminProfileUpdate';
+import { updateAdminPassword } from './AdminPasswordChange';
 import { dataExport } from './DataExport';
 
 const authApp = new Hono()
@@ -22,10 +23,11 @@ const authApp = new Hono()
     .route('/', DeleteStudent)
     .route('/', studentLogout)
     .route('/', hookSession)
-    .route('/', updateStudent)
     .route('/', changeStudentPassword)
     .route('/', updateStudentProfile)
-    .route('/', adminUpdate)
+    .route('/', updateAdminProfile)
+    .route('/', updateAdminPassword)
+    .route('/', getAdminSession)
     .route('/', dataExport);
 
 export default authApp;

@@ -145,7 +145,7 @@ export const AdminNavigation = ({ currentPage }: AdminNavigationProps) => {
                                         <p className="text-sm font-medium text-gray-900">
                                             {user?.email}
                                         </p>
-                                        <p className="text-xs text-gray-500">システム管理者</p>
+                                        <p className="text-xs text-gray-500">{user?.name}</p>
                                     </div>
                                 </Button>
                             </DropdownMenuTrigger>
